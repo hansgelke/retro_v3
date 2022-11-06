@@ -1,0 +1,62 @@
+/* ------------------------------------------------------------------
+ * --  _____       ______  _____                                    -
+ * -- |_   _|     |  ____|/ ____|                                   -
+ * --   | |  _ __ | |__  | (___    Institute of Embedded Systems    -
+ * --   | | | '_ \|  __|  \___ \   Zurich University of             -
+ * --  _| |_| | | | |____ ____) |  Applied Sciences                 -
+ * -- |_____|_| |_|______|_____/   8401 Winterthur, Switzerland     -
+ * ------------------------------------------------------------------
+ * --
+ * -- File:	cli.c
+ * -- Date:	05.02.2017
+ * -- Author:	rosn
+ * --
+ * ------------------------------------------------------------------
+ */
+#include <sys/mman.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <linux/i2c-dev.h>
+#include <sys/ioctl.h>
+
+//Hardware definitions
+#define GPIO_IN 0x0
+#define GPIO_OUT 0x1
+#define GPIO_EDGE_FALLING 0x0
+#define GPIO_EDGE_RISING 0x1
+#define GPIO_HIGH_DETECT 0x2
+#define GPIO_LOW_DETECT 0x3
+
+// Macros to calculate register offsets
+#define GPFSELX_OFFSET(pin) (pin / 10 * 0x04)
+#define FSELX_OFFSET(pin) (pin % 10 * 3)
+
+#define GPIO_BASE_ADDR   	   (0xfe200000) // base of GPIO page
+#define GPIO_FSEL1         (0x00000004) // GPIOFSEL1 offset
+#define GPIO_FSEL2         (0x00000008) // GPIOFSEL1 offset
+#define GPIO_SET0          (0x0000001c) // GPIOSET0 offset
+#define GPIO_CLR0          (0x00000028) //GPIOCLR0 offset
+#define GPIO_LVL0          (0x00000034) //GPIOCLR0 offset
+
+#define MCP_IODIR   (0x00) // 1=input, 0=output
+#define MCP_IPOL    (0x01)
+#define MCP_GPINTEN (0x02)
+#define MCP_DEFVAL  (0x03)
+#define MCP_INTCON  (0x04)
+#define MCP_IOCON   (0x05)
+#define MCP_GPPU    (0x06)
+#define MCP_INTF    (0x07)
+#define MCP_INTCAP  (0x08)
+#define MCP_GPIO    (0x09)
+#define MCP_OLAT    (0x0a)
+
+//Function declarations
+int mmap_virtual_base();
+int read_ctrl_register(uint8_t busno, uint8_t register_addr, uint8_t device_addr);
+void write_ctrl_register(uint8_t busno,uint8_t device_addr, uint8_t register_addr, uint8_t register_data);
+
