@@ -219,17 +219,17 @@ read_ctrl_register(uint8_t busno, uint8_t device_addr, uint8_t register_addr){
     }
 
     if (ioctl(fd,I2C_SLAVE,device_addr) < 0) {
-        printf("Error gpio.c Line 223: Failed to set I2C Bus %d bus as slave.\n", busno);
+        printf("Error gpio.c Line 222: Failed to set I2C Bus %d bus as slave.\n", busno);
         exit(1);
     }
 
     wr_buf[0] = register_addr;
     if (write(fd,wr_buf,1) != 1)
-        printf("Error gpio.c Line 230: Failed to write from i2c bus No: %d\n", busno);
+        printf("Error gpio.c Line 228: Failed to write from i2c bus No: %d\n", busno);
 
 
     if (read(fd,rd_buf,1) != 1) {
-        printf("Error gpio.c Line 234: Failed to read i2c bus No: %d\n", busno);
+        printf("Error gpio.c Line 232: Failed to read i2c bus No: %d\n", busno);
 
     } else {
         register_data = rd_buf[0];
