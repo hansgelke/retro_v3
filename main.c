@@ -60,27 +60,39 @@ int main(void) {
         }
 
 
-        else if (strcmp(line, "wr_i2c") == 0){
+        else if (strcmp(line, "wr_i2c\n") == 0){
             // f <reg addr 0..15> <data 0..15>
             //arg1 = Bus Number
             //arg2 = Write Data
             //arg3 = Device Address
             //arg4 = Register Address
-            sscanf(&line[6], "%x %x %x %x", &a_arg1, &a_arg2, &a_arg3, &a_arg4);
+
+                printf("Enter Bus_No, Device_Addr, Register_Addr, Write_Data:\n");
+                fgets(line,100,stdin);
+                if (strcmp(line, "x\n") == 0){
+                    return 0;
+                }
+            sscanf(&line[0], "%x %x %x %x", &a_arg1, &a_arg2, &a_arg3, &a_arg4);
             write_ctrl_register(a_arg1, a_arg2, a_arg3, a_arg4);
             printf("BusNo:%x Device:%x Register:%x is set to:%x \n", a_arg1, a_arg2, a_arg3, a_arg4);
+            }
 
-        }
 
 
-        else if (strcmp(line, "rd_i2c") == 0){
+        else if (strcmp(line, "rd_i2c\n") == 0){
             // g <reg addr 0..15>
             //arg1= Device Address
             //arg2= Register Address
-            sscanf(&line[6], "%x %x %x", &a_arg1, &a_arg2, &a_arg3);
+                printf("Enter Bus_No, Device_Addr, Register_Addr:\n");
+                fgets(line,100,stdin);
+                if (strcmp(line, "x\n") == 0){
+                   return 0;
+                  }
+            sscanf(&line[0], "%x %x %x", &a_arg1, &a_arg2, &a_arg3);
             mcp_rd_val = read_ctrl_register(a_arg1,a_arg2, a_arg3);
             printf("BusNo:%d Device:%x Register:%x Contains:%x \n", a_arg1, a_arg2, a_arg3, mcp_rd_val);
-        }
+            }
+
         else {
             printf("Unknown command '%c'\n", line[0]);
             return(0);
