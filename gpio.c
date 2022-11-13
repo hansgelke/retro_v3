@@ -155,28 +155,35 @@ static void mmap_gpio_set( int gpio, int value)
  * i2c-dev
  ****************************************************************/
 void
-write_ctrl_register(uint8_t busno, uint8_t device_addr, uint8_t register_addr, uint8_t write_data){
+write_ctrl_register(uint8_t device_addr, uint8_t register_addr, uint8_t write_data){
 
     uint8_t wr_buf[2];
     char *i2c_device = "/dev/i2c-4";
 
-    if (busno == 0) {
-        i2c_device = "/dev/i2c-4";
-    }
-    else if (busno == 1) {
+    switch (device_addr)
+    {
+    case MATRIX_TO:
         i2c_device = "/dev/i2c-5";
-    }
-    else {
+        break;
+    case MATRIX_FROM:
+        i2c_device = "/dev/i2c-5";
+        break;
+    case DTMF_READ:
+        i2c_device = "/dev/i2c-5";
+        break;
+    default:
         i2c_device = "/dev/i2c-4";
     }
+//Switches the I2C bus depending on I2C device address
+
 
     if ((fd = open(i2c_device,O_RDWR)) < 0) {
-        printf("Error gpio.c Line 174: Failed to open I2C Bus %d \n O_RDWR", busno);
+        printf("Error gpio.c Line 174: Failed to open I2C device \n O_RDWR");
         exit(1);
     }
 
     if (ioctl(fd,I2C_SLAVE,device_addr) < 0) {
-        printf("Error gpio.c Line 179: Failed to set I2C Bus %d bus as slave.\n", busno);
+        printf("Error gpio.c Line 179: Failed to set I2C device as slave.\n");
 
     }
 
@@ -184,7 +191,7 @@ write_ctrl_register(uint8_t busno, uint8_t device_addr, uint8_t register_addr, u
     wr_buf[0]=register_addr; // Register Address
     wr_buf[1]=write_data; //
     if (write(fd,wr_buf,2) != 2)
-        printf("Error gpio.c Line 188: Failed to write bus %d\n", busno);
+        printf("Error gpio.c Line 188: Failed to write bus\n");
 
 
     close(fd);
@@ -195,7 +202,7 @@ write_ctrl_register(uint8_t busno, uint8_t device_addr, uint8_t register_addr, u
  ***************************************************************************/
 
 int
-read_ctrl_register(uint8_t busno, uint8_t device_addr, uint8_t register_addr){
+read_ctrl_register(uint8_t device_addr, uint8_t register_addr){
 
     uint8_t register_data = 0;
     uint8_t rd_buf[1];
@@ -203,33 +210,40 @@ read_ctrl_register(uint8_t busno, uint8_t device_addr, uint8_t register_addr){
 
     char *i2c_device = "/dev/i2c-4";
 
-    if (busno == 0) {
-        i2c_device = "/dev/i2c-4";
-    }
-    else if (busno == 1) {
+    switch (device_addr)
+    {
+    case MATRIX_TO:
         i2c_device = "/dev/i2c-5";
-    }
-    else {
+        break;
+    case MATRIX_FROM:
+        i2c_device = "/dev/i2c-5";
+        break;
+    case DTMF_READ:
+        i2c_device = "/dev/i2c-5";
+        break;
+    default:
         i2c_device = "/dev/i2c-4";
     }
+//Switches the I2C bus depending on I2C device address
+
 
     if ((fd = open(i2c_device,O_RDWR)) < 0) {
-        printf("Error gpio.c Line 217: Failed to open I2C Bus %d \n O_RDWR", busno);
+        printf("Error gpio.c Line 217: Failed to open I2C Bus \n O_RDWR");
         exit(1);
     }
 
     if (ioctl(fd,I2C_SLAVE,device_addr) < 0) {
-        printf("Error gpio.c Line 222: Failed to set I2C Bus %d bus as slave.\n", busno);
+        printf("Error gpio.c Line 222: Failed to set I2C Bus as slave.\n");
         exit(1);
     }
 
     wr_buf[0] = register_addr;
     if (write(fd,wr_buf,1) != 1)
-        printf("Error gpio.c Line 228: Failed to write from i2c bus No: %d\n", busno);
+        printf("Error gpio.c Line 228: Failed to write from i2c bus\n");
 
 
     if (read(fd,rd_buf,1) != 1) {
-        printf("Error gpio.c Line 232: Failed to read i2c bus No: %d\n", busno);
+        printf("Error gpio.c Line 232: Failed to read i2c bus\n");
 
     } else {
         register_data = rd_buf[0];
@@ -239,5 +253,19 @@ read_ctrl_register(uint8_t busno, uint8_t device_addr, uint8_t register_addr){
     return register_data;
 }
 
+
+void set_connections(uint8_t from, uint8_t to){
+
+//Converts numeric to bit value
+    uint8_t exch_lines[9] = {0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
+
+  write_ctrl_register(MATRIX_FROM, MCP_OLAT, exch_lines[from]);
+  write_ctrl_register(MATRIX_TO, MCP_OLAT, exch_lines[to]);
+
+}
+
+void init_gpios(){
+
+}
 
 

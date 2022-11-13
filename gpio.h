@@ -43,6 +43,9 @@
 #define GPIO_CLR0          (0x00000028) //GPIOCLR0 offset
 #define GPIO_LVL0          (0x00000034) //GPIOCLR0 offset
 
+// NEW FROM HERE //
+
+
 #define MCP_IODIR   (0x00) // 1=input, 0=output
 #define MCP_IPOL    (0x01)
 #define MCP_GPINTEN (0x02)
@@ -55,8 +58,18 @@
 #define MCP_GPIO    (0x09)
 #define MCP_OLAT    (0x0a)
 
+#define LOOP_DETECT (0x20) // Bus0
+#define PHONE_AC (0x21) // Bus0
+#define PHONE_DC (0x22) // Bus0
+#define CONNECT_CTRL (0x23) // Bus0
+#define MATRIX_TO (0x24) // Bus1
+#define MATRIX_FROM (0x25) // Bus1
+#define DTMF_READ (0x26) // Bus1
+
+
 //Function declarations
 int mmap_virtual_base();
-int read_ctrl_register(uint8_t busno, uint8_t register_addr, uint8_t device_addr);
-void write_ctrl_register(uint8_t busno,uint8_t device_addr, uint8_t register_addr, uint8_t register_data);
+int read_ctrl_register(uint8_t register_addr, uint8_t device_addr);
+void write_ctrl_register(uint8_t device_addr, uint8_t register_addr, uint8_t register_data);
+void set_connections(uint8_t from, uint8_t to);
 
