@@ -72,4 +72,5 @@ int mmap_virtual_base();
 int read_ctrl_register(uint8_t register_addr, uint8_t device_addr);
 void write_ctrl_register(uint8_t device_addr, uint8_t register_addr, uint8_t register_data);
 void set_connections(uint8_t from, uint8_t to);
+void init_gpios();
 

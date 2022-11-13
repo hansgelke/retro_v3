@@ -37,6 +37,8 @@
 
 void *virtual_gpio_base;
 
+
+
 int main(void) {
     char line[100];
     int  a_arg1 = 0, a_arg2 = 0, a_arg3 = 0;
@@ -44,6 +46,8 @@ int main(void) {
     int pin_val = 0;
     int mcp_rd_val = 0;
     int ret;
+
+init_gpios();
 
     ret =mmap_virtual_base();
     if (ret != 0) {

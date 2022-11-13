@@ -265,6 +265,14 @@ void set_connections(uint8_t from, uint8_t to){
 }
 
 void init_gpios(){
+    //Set Matrix Controllers to Output
+    write_ctrl_register(MATRIX_FROM, MCP_IODIR, 0x00);
+    write_ctrl_register(MATRIX_TO, MCP_IODIR, 0x00);
+    //Set the AC/DC Registers to DC
+    write_ctrl_register(PHONE_DC, MCP_IODIR, 0x00);
+    write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff);
+    write_ctrl_register(PHONE_AC, MCP_IODIR, 0x00);
+    write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00);
 
 }
 
