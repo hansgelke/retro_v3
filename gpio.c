@@ -155,7 +155,7 @@ static void mmap_gpio_set( int gpio, int value)
  * i2c-dev
  ****************************************************************/
 void
-write_ctrl_register(uint8_t device_addr, uint8_t register_addr, uint8_t write_data){
+write_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint8_t write_data){
 
     uint8_t wr_buf[2];
     char *i2c_device = "/dev/i2c-4";
@@ -188,7 +188,7 @@ write_ctrl_register(uint8_t device_addr, uint8_t register_addr, uint8_t write_da
     }
 
     //Write I2C Register
-    wr_buf[0]=register_addr; // Register Address
+    wr_buf[0]=mcp_reg; // Register Address
     wr_buf[1]=write_data; //
     if (write(fd,wr_buf,2) != 2)
         printf("Error gpio.c Line 188: Failed to write bus\n");
@@ -202,14 +202,16 @@ write_ctrl_register(uint8_t device_addr, uint8_t register_addr, uint8_t write_da
  ***************************************************************************/
 
 int
-read_ctrl_register(uint8_t device_addr, uint8_t register_addr){
+read_ctrl_register(uint8_t device_addr, uint8_t mcp_reg){
 
     uint8_t register_data = 0;
     uint8_t rd_buf[1];
     uint8_t wr_buf[1];
 
     char *i2c_device = "/dev/i2c-4";
-
+//Set the i2c Bus 4 or 5 depending on the I2Cchip beeing written
+//Only MATRIX_TO, MATRIX_FROM and DTMF_I2C devices are on I2c-5
+// All the rest is in I2C-4
     switch (device_addr)
     {
     case MATRIX_TO:
@@ -224,7 +226,6 @@ read_ctrl_register(uint8_t device_addr, uint8_t register_addr){
     default:
         i2c_device = "/dev/i2c-4";
     }
-//Switches the I2C bus depending on I2C device address
 
 
     if ((fd = open(i2c_device,O_RDWR)) < 0) {
@@ -237,7 +238,7 @@ read_ctrl_register(uint8_t device_addr, uint8_t register_addr){
         exit(1);
     }
 
-    wr_buf[0] = register_addr;
+    wr_buf[0] = mcp_reg;
     if (write(fd,wr_buf,1) != 1)
         printf("Error gpio.c Line 228: Failed to write from i2c bus\n");
 
@@ -273,7 +274,97 @@ void init_gpios(){
     write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff);
     write_ctrl_register(PHONE_AC, MCP_IODIR, 0x00);
     write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00);
+// Set the Connect contro register to output
+    write_ctrl_register(CONNECT_CTRL, MCP_IODIR, 0x00);
+    write_ctrl_register(CONNECT_CTRL, MCP_OLAT, 0x00);
+// DTMF and LOOP Detect are input registers
+    write_ctrl_register(DTMF_READ, MCP_IODIR, 0xff);
+    write_ctrl_register(LOOP_DETECT, MCP_IODIR, 0xff);
 
+
+}
+
+uint8_t
+hex2lines(uint8_t hex){
+    //Converts a hex number from the arguments to a single bit
+    //Define Array
+    uint8_t exch_lines[9] = {0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
+    uint8_t lines =exch_lines[hex];
+
+    return lines;
+}
+uint8_t
+hex2notlines(uint8_t hex){
+    //Converts a hex number from the arguments to a single bit
+    //Returns low active bits
+    uint8_t exch_lines[9] = {0xff, 0xfe, 0xfd, 0xfb, 0xf7, 0xef, 0xdf, 0xbf, 0x7f};
+    uint8_t lines =exch_lines[hex];
+
+    return lines;
+}
+//
+// Write Single Bit in I2C
+//
+void
+write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value){
+    char rd_buf[0];
+    char wr_buf[0];
+    uint8_t cur_value = 0;
+    uint8_t mask;
+
+    char *i2c_device = "/dev/i2c-4";
+//Set the i2c Bus 4 or 5 depending on the I2Cchip beeing written
+//Only MATRIX_TO, MATRIX_FROM and DTMF_I2C devices are on I2c-5
+// All the rest is in I2C-4
+    switch (device_addr)
+    {
+    case MATRIX_TO:
+        i2c_device = "/dev/i2c-5";
+        break;
+    case MATRIX_FROM:
+        i2c_device = "/dev/i2c-5";
+        break;
+    case DTMF_READ:
+        i2c_device = "/dev/i2c-5";
+        break;
+    default:
+        i2c_device = "/dev/i2c-4";
+    }
+
+    if ((fd = open(i2c_device,O_RDWR)) < 0) {
+        printf("Error gpio.c Line 335: Failed to open I2C Bus \n O_RDWR");
+        exit(1);
+    }
+
+    if (ioctl(fd,I2C_SLAVE,device_addr) < 0) {
+        printf("Failed to acquire I2C bus access and/or talk to slave.\n");
+        exit(1);
+    }
+
+    wr_buf[0] = mcp_reg;
+    if (write(fd,wr_buf,1) != 1)
+        printf("Failed to write to the i2c bus.\n");
+
+    if (read(fd,rd_buf,1) != 1) {
+        /* ERROR HANDLING: i2c transaction failed */
+        printf("Failed to read from the i2c bus.\n");
+    } else {
+        cur_value = rd_buf[0];
+    }
+
+    mask = 0x1 << bit_pos;
+    if (value == 1){
+        cur_value |= mask;
+    }
+    else {
+        cur_value &= ~mask;
+    }
+    wr_buf[0] = mcp_reg; // Register Address
+    wr_buf[1] = cur_value; //
+    if (write(fd,wr_buf,2) != 2)
+        printf("Failed to write to the i2c bus.\n");
+
+    close(fd);
 }
 
 

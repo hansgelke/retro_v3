@@ -9,3 +9,6 @@ include_directories("include")
 add_executable(retro_v3 ${SRC_LIST})
 
 install(TARGETS retro_v3)
+
+find_package (Threads)
+target_link_libraries (${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})

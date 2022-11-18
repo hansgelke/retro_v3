@@ -66,11 +66,22 @@
 #define MATRIX_FROM (0x25) // Bus1
 #define DTMF_READ (0x26) // Bus1
 
+//Single Bits of I2C
+#define RINGER_ENABLE (0x02) // Turn Bridge on
+#define EXT_LINE_RELAY (0x03) // Assert Relay for external line
+#define EXT_TO_ENABLE (0x04) // Turn on To line
+#define EXT_FROM_ENABLE (0x5) // Turn on From Line
+
+
 
 //Function declarations
 int mmap_virtual_base();
 int read_ctrl_register(uint8_t register_addr, uint8_t device_addr);
 void write_ctrl_register(uint8_t device_addr, uint8_t register_addr, uint8_t register_data);
 void set_connections(uint8_t from, uint8_t to);
+uint8_t hex2lines(uint8_t hex);
+uint8_t hex2notlines(uint8_t hex);
+void write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value);
+
 void init_gpios();
 
