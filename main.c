@@ -26,6 +26,7 @@
 #include <sys/ioctl.h>
 #include "gpio.h"
 #include "pwm.h"
+#include "main.h"
 
 // Hardware definitions
 #define GPIO_IN 0x0
@@ -35,23 +36,40 @@
 #define GPIO_HIGH_DETECT 0x2
 #define GPIO_LOW_DETECT 0x3
 
-void *print_message_function( void *ptr )
-{
-    char *message;
-    message = (char *) ptr;
-    printf("%s \n", message);
-}
-
 void *virtual_gpio_base;
 
-
-
 int main(void) {
+
+    init_gpios();
+    init_pwm();
+
+    pthread_t t_pwm, t_menue;
+    int iret1;
+    int i_dds = 0;
+    float sine_array[] = {0, 0.19, 0.38, 0.56, 0.71, 0.83, 0.92, 0.98, 1.0, 0.98, 0.92, 0.83, 0.71, 0.56, 0.38,
+                          0.19, 0, -0.19, -0.38, -0.56, -0.71, -0.83, -0.92, -0.98, -1.0, -0.98, -0.92, -0.83, -0.71, -0.56, -0.38, -0.19 };
+
+    iret1 = pthread_create(&t_pwm, NULL, &tf_pwm, NULL);
+    iret1 = pthread_create(&t_menue, NULL, &tf_menue, NULL);
+
+    pthread_join(t_pwm, NULL);
+    pthread_join(t_menue, NULL);
+
+
+}
+
+void
+*tf_menue()
+{
+    struct sched_param para_menue;
+    para_menue.sched_priority = 40;
+    sched_setscheduler(0,SCHED_RR, &para_menue);
+
     char line[100];
     int  a_arg1 = 0, a_arg2 = 0, a_arg3 = 0;
     char s_arg[100];
     int mcp_rd_val = 0;
-    int ret;
+
     uint32_t pwm0_ctl_reg = 0;
     uint32_t pwm0_sta_reg = 0;
     uint32_t pwm0_dmac_reg = 0;
@@ -61,25 +79,7 @@ int main(void) {
     uint32_t pwm0_rng2_reg = 0;
     uint32_t pwm0_dat2_reg = 0;
 
-
-
-    init_gpios();
-    init_pwm();
-
-    pthread_t t_pwm;
-    int iret1;
-    int i_dds = 0;
-    float sine_array[] = {0, 0.19, 0.38, 0.56, 0.71, 0.83, 0.92, 0.98, 1.0, 0.98, 0.92, 0.83, 0.71, 0.56, 0.38,
-                          0.19, 0, -0.19, -0.38, -0.56, -0.71, -0.83, -0.92, -0.98, -1.0, -0.98, -0.92, -0.83, -0.71, -0.56, -0.38, -0.19 };
-
-   // iret1 = pthread_create(&t_pwm, NULL, &tf_pwm, NULL);
-   // pthread_join(t_pwm, NULL);
-
-    ret =mmap_virtual_base();
-    if (ret != 0) {
-        printf("Error: Failed to initialize GPIOs: %s\n", strerror(abs(ret)));
-        exit(ret);
-    }
+    printf("Started Menu threat");
 
 
     while(1) {
@@ -87,13 +87,6 @@ int main(void) {
         fgets(line,100,stdin);
 
 
-
-
-
-        for (i_dds = 0; i_dds < 32; ++i_dds) {
-            pwm_reg_write(PWM_DAT1, (1280+(1280*sine_array[i_dds])));
-            usleep(1250);
-        }
         if (strcmp(line, "x") == 0){
             return 0;
         }
@@ -188,7 +181,7 @@ int main(void) {
         }
 
         else if (strcmp(line, "pwms\n") == 0){
-            printf("Ring Phone (0-7):");
+            printf("Ring Phone (1-8):");
             fgets(line,100,stdin);
             if (strcmp(line, "x\n") == 0){
                 return 0;
@@ -204,8 +197,8 @@ int main(void) {
 
         else if (strcmp(line, "pwmp\n") == 0){
             pwm_reg_write(PWM_CTL, 0x00);
-            write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(a_arg1));
-            write_ctrl_register(PHONE_DC, MCP_OLAT, hex2lines(a_arg1));
+            write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00);
+            write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff);
             write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0);
 
         }
@@ -225,10 +218,9 @@ int main(void) {
         }
 
         else {
-            printf("Unknown command '%c'\n", line[0]);
-            return(0);
-        }
 
-    }
-}
+
+
+
+
 

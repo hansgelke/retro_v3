@@ -92,14 +92,13 @@ void *tf_pwm()
         //sem_post(&sem_pwmon); // Post semaphore for next cycle
         for (i_dds = 0; i_dds < 32; ++i_dds) {
             pwm_reg_write(PWM_DAT1, (1280+(1280*sine_array[i_dds])));
-            usleep(1250); //CH
-            //usleep(1562); //US
+            //usleep(1250); //CH
+            usleep(1562); //US
         }
     }
 }
 
 void
-
 init_pwm(){
     int ret;
     ret =mmap_pwm();

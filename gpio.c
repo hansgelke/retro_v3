@@ -269,12 +269,13 @@ void init_gpios(){
     //Set Matrix Controllers to Output
     write_ctrl_register(MATRIX_FROM, MCP_IODIR, 0x00);
     write_ctrl_register(MATRIX_TO, MCP_IODIR, 0x00);
-    //Set the AC/DC Registers to DC
+    //Set the AC/DC Registers to output
     write_ctrl_register(PHONE_DC, MCP_IODIR, 0x00);
-    write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff);
     write_ctrl_register(PHONE_AC, MCP_IODIR, 0x00);
-    write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00);
-// Set the Connect contro register to output
+    //Set the AC/DC Registers to DC
+    write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff); // set to one
+    write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00); // set to zero
+// Set the Connect control register to output and off
     write_ctrl_register(CONNECT_CTRL, MCP_IODIR, 0x00);
     write_ctrl_register(CONNECT_CTRL, MCP_OLAT, 0x00);
 // DTMF and LOOP Detect are input registers
