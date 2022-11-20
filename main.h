@@ -17,8 +17,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <semaphore.h>
 
 
+sem_t sem_pwmon;
 
 
 //Function declarations

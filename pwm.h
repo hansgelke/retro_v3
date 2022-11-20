@@ -17,6 +17,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <semaphore.h>
+
 
 
 #define PWM_BASE_ADDR   (0xfe20c000)

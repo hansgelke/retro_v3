@@ -27,6 +27,7 @@
 #include "gpio.h"
 #include "pwm.h"
 #include "main.h"
+#include <semaphore.h>
 
 // Hardware definitions
 #define GPIO_IN 0x0
@@ -42,6 +43,7 @@ int main(void) {
 
     init_gpios();
     init_pwm();
+    sem_init(&sem_pwmon,0,0);
 
     pthread_t t_pwm, t_menue;
     int iret1;
@@ -193,6 +195,9 @@ void
             write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(a_arg1));
             write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(a_arg1));
             write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1);
+            sem_post(&sem_pwmon); // Post semaphore to start
+
+
         }
 
         else if (strcmp(line, "pwmp\n") == 0){
@@ -200,7 +205,23 @@ void
             write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00);
             write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff);
             write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0);
+            sem_init(&sem_pwmon,0,0);
 
+        }
+
+
+
+        else if (strcmp(line, "pwmon\n") == 0){
+            pwm_reg_write(PWM_CTL, 0x81);
+            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1);
+
+        }
+
+        else if (strcmp(line, "pwmoff\n") == 0){
+            sem_init(&sem_pwmon,0,0);
+                 pwm_reg_write(PWM_CTL, 0x00);
+
+            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0);
         }
 
         else if (strcmp(line, "exton\n") == 0){
@@ -218,7 +239,10 @@ void
         }
 
         else {
-
+            printf("Unknown command '%c'\n", line[0]);
+                    }
+                }
+            }
 
 
 
