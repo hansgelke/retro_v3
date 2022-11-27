@@ -12,3 +12,15 @@ install(TARGETS retro_v3)
 
 find_package (Threads)
 target_link_libraries (${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
+
+find_package (Threads)
+include_directories(/srv/nfs/usr/include/gstreamer-1.0
+                    /srv/nfs/usr/include/glib-2.0
+                    /srv/nfs/usr/lib/glib-2.0/include)
+target_link_libraries (${PROJECT_NAME}
+${CMAKE_THREAD_LIBS_INIT} m
+                    /srv/nfs/usr/lib/libasound.so
+                    /srv/nfs/usr/lib/gstreamer-1.0/libgstalsa.so
+                    /srv/nfs/usr/lib/libgstreamer-1.0.so
+                    /srv/nfs/usr/lib/libgobject-2.0.so
+                    /srv/nfs/usr/lib/libglib-2.0.so )

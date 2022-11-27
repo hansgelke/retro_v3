@@ -27,6 +27,7 @@
 #include "gpio.h"
 #include "pwm.h"
 #include "main.h"
+#include "tones.h"
 #include <semaphore.h>
 
 // Hardware definitions
@@ -44,6 +45,7 @@ int main(void) {
     init_gpios();
     init_pwm();
     sem_init(&sem_pwmon,0,0);
+    tones(0, 0);
 
     pthread_t t_pwm, t_menue;
     int iret1;
