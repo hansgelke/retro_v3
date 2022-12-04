@@ -93,8 +93,11 @@ void *tf_pwm()
     while(1){
         //sem_wait(&sem_pwmon); // wait for pwm to be turned on
         for (i_dds = 0; i_dds < 32; ++i_dds) {
-            pwm_reg_write(PWM_DAT1, (80+(80*sine_array[i_dds])));
-            //pwm_reg_write(PWM_DAT1, (160+(160*sine_array[i_dds])));
+            //pwm_reg_write(PWM_DAT1, (1280+(1280*sine_array[i_dds])));
+            pwm_reg_write(PWM_DAT1, (160+(160*sine_array[i_dds])));
+            //pwm_reg_write(PWM_DAT1, (10+(10*sine_array[i_dds])));
+
+
 
             //usleep(1250); //CH
             usleep(1562); //US
@@ -113,17 +116,23 @@ init_pwm(){
     pwm_reg_write(PWM_CTL, 0x0);
     pwm_reg_write(PWM_STA, 0x202);
     pwm_reg_write(PWM_DMAC, 0x707);
-    //pwm_reg_write(PWM_RNG1, 0x9ff);
-    //pwm_reg_write(PWM_DAT1, 0x4ff);
+    pwm_reg_write(PWM_DAT1, 0x6f);
     pwm_reg_write(PWM_FIF1, 0x70776d30);
     pwm_reg_write(PWM_RNG2, 0x20);
     pwm_reg_write(PWM_DAT2, 0x00);
 
+
+    pwm_reg_write(PWM_RNG1, 0x13f);
+    //pwm_reg_write(PWM_RNG1, 0x4f);
+    //pwm_reg_write(PWM_RNG1, 0x13);
+
+
+
     //pwm_reg_write(PWM_RNG1, 0x13f);
     //pwm_reg_write(PWM_DAT1, 0x6f);
 
-    pwm_reg_write(PWM_RNG1, 0x9f);
-    pwm_reg_write(PWM_DAT1, 0x37);
+    //pwm_reg_write(PWM_RNG1, 0x9f);
+    //pwm_reg_write(PWM_DAT1, 0x37);
 
 
 }

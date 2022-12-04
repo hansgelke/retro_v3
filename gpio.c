@@ -279,7 +279,8 @@ void init_gpios(){
     write_ctrl_register(CONNECT_CTRL, MCP_IODIR, 0x00);
     write_ctrl_register(CONNECT_CTRL, MCP_OLAT, 0x00);
 // DTMF and LOOP Detect are input registers
-    write_ctrl_register(DTMF_READ, MCP_IODIR, 0xff);
+    //DTMF_READ set 0-3 as read, 4-7 as write
+    write_ctrl_register(DTMF_READ, MCP_IODIR, 0x0f);
     write_ctrl_register(LOOP_DETECT, MCP_IODIR, 0xff);
 
 

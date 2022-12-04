@@ -72,6 +72,9 @@
 #define EXT_TO_ENABLE (0x04) // Turn on To line
 #define EXT_FROM_ENABLE (0x5) // Turn on From Line
 
+#define SIGNAL_B_FROM (0x5)//Codec Output Signals
+#define SIGNAL_B_TO (0x7)//Codec Output Signals
+
 
 
 //Function declarations

@@ -28,6 +28,7 @@
 #include "pwm.h"
 #include "main.h"
 #include "tones.h"
+#include "signals.h"
 #include <semaphore.h>
 
 // Hardware definitions
@@ -45,9 +46,8 @@ int main(void) {
     init_gpios();
     init_pwm();
     sem_init(&sem_pwmon,0,0);
-    tones(0, 0);
 
-    pthread_t t_pwm, t_menue;
+    pthread_t t_pwm, t_menue, t_tone_gen, t_generate_signals ;
     int iret1;
     int i_dds = 0;
     float sine_array[] = {0, 0.19, 0.38, 0.56, 0.71, 0.83, 0.92, 0.98, 1.0, 0.98, 0.92, 0.83, 0.71, 0.56, 0.38,
@@ -55,9 +55,15 @@ int main(void) {
 
     iret1 = pthread_create(&t_pwm, NULL, &tf_pwm, NULL);
     iret1 = pthread_create(&t_menue, NULL, &tf_menue, NULL);
+    iret1 = pthread_create(&t_tone_gen, NULL, &tf_tone_gen, NULL);
+    iret1 = pthread_create(&t_generate_signals, NULL, &tf_generate_signals, NULL);
+
 
     pthread_join(t_pwm, NULL);
     pthread_join(t_menue, NULL);
+    pthread_join(t_tone_gen, NULL);
+    pthread_join(t_generate_signals, NULL);
+
 
 
 }
@@ -87,6 +93,22 @@ void
 
 
     while(1) {
+        printf("rdiic - Read I2C Device Register\n");
+        printf("wriic - Write I2C\n");
+        printf("conn - Connect two devices\n");
+        printf("pwmwr - Write pwm register\n");
+        printf("pwmrd - Read PWM register\n");
+        printf("ring - Ring a phone\n");
+        printf("rings - Stop Ringing\n");
+        printf("pwmon - Turn PWM on\n");
+        printf("pwmoff - Turn PWM off\n");
+        printf("exton - Connects to Edxternal line\n");
+        printf("extoff - Disconnects external line\n");
+        printf("sinus - Generate Sinus Signal and send to a phone\n");
+        printf("gbring - Generate GB ring signal and send to phone\n");
+        printf("\n");
+        printf("\n");
+
         printf("Command > ");
         fgets(line,100,stdin);
 
@@ -95,7 +117,7 @@ void
             return 0;
         }
 
-        else if (strcmp(line, "wri\n") == 0){
+        else if (strcmp(line, "wriic\n") == 0){
 
             printf("Device_Addr, Register_Addr, Write_Data:\n");
             fgets(line,100,stdin);
@@ -109,7 +131,7 @@ void
 
 
 
-        else if (strcmp(line, "rdi\n") == 0){
+        else if (strcmp(line, "rdiic\n") == 0){
             printf("Device_Addr, Register_Addr:\n");
             fgets(line,100,stdin);
             if (strcmp(line, "x\n") == 0){
@@ -120,7 +142,7 @@ void
             printf("Device:%x Register:%x Contains:%x \n", a_arg1, a_arg2, mcp_rd_val);
         }
 
-        else if (strcmp(line, "con\n") == 0){
+        else if (strcmp(line, "conn\n") == 0){
             printf("From, To:\n");
             fgets(line,100,stdin);
             if (strcmp(line, "x\n") == 0){
@@ -132,7 +154,7 @@ void
         }
 
         // Write PWM Register
-        else if (strcmp(line, "wrpwm\n") == 0){
+        else if (strcmp(line, "pwmwr\n") == 0){
             printf("PWM Register Address, Write Value\n");
             fgets(line,100,stdin);
             if (strcmp(line, "x\n") == 0){
@@ -163,7 +185,7 @@ void
         }
 
         //Dump all PWM0 Registers
-        else if (strcmp(line, "rdpwm\n") == 0){
+        else if (strcmp(line, "pwmrd\n") == 0){
             pwm0_ctl_reg = pwm_reg_read (0x0);
             pwm0_sta_reg = pwm_reg_read (0x4);
             pwm0_dmac_reg = pwm_reg_read (0x8);
@@ -184,7 +206,7 @@ void
             printf("PWM0 DAT2 (0x024)Register: 0x%08x \n", pwm0_dat2_reg);
         }
 
-        else if (strcmp(line, "pwms\n") == 0){
+        else if (strcmp(line, "ring\n") == 0){
             printf("Ring Phone (1-8):");
             fgets(line,100,stdin);
             if (strcmp(line, "x\n") == 0){
@@ -202,7 +224,7 @@ void
 
         }
 
-        else if (strcmp(line, "pwmp\n") == 0){
+        else if (strcmp(line, "rings\n") == 0){
             pwm_reg_write(PWM_CTL, 0x00);
             write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00);
             write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff);
@@ -221,7 +243,7 @@ void
 
         else if (strcmp(line, "pwmoff\n") == 0){
             sem_init(&sem_pwmon,0,0);
-                 pwm_reg_write(PWM_CTL, 0x00);
+            pwm_reg_write(PWM_CTL, 0x00);
 
             write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0);
         }
@@ -240,11 +262,32 @@ void
 
         }
 
+        else if (strcmp(line, "sinus\n") == 0){
+            printf("Send Tone to Lines (1-8):");
+            fgets(line,100,stdin);
+            if (strcmp(line, "x\n") == 0){
+                return 0;
+            }
+            sscanf(&line[0], "%x", &a_arg1);
+
+
+            melody = ger_dial;
+            sem_post(&sem_signal);
+            write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1);
+            write_ctrl_register(MATRIX_FROM, MCP_OLAT, hex2lines(a_arg1));
+
+        }
+
+        else if (strcmp(line, "gbring\n") == 0){
+            melody = gb_ring;
+            sem_post(&sem_signal);
+        }
+
         else {
             printf("Unknown command '%c'\n", line[0]);
-                    }
-                }
-            }
+        }
+    }
+}
 
 
 
