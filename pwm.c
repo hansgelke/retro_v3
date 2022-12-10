@@ -87,15 +87,16 @@ void *tf_pwm()
     sched_setscheduler(0,SCHED_RR, &para_pwm);
     int i_dds = 0;
     //sinus shape for ringer pwm
-    float sine_array[] = {0, 0.19, 0.38, 0.56, 0.71, 0.83, 0.92, 0.98, 1.0, 0.98, 0.92, 0.83, 0.71, 0.56, 0.38,
-                          0.19, 0, -0.19, -0.38, -0.56, -0.71, -0.83, -0.92, -0.98, -1.0, -0.98, -0.92, -0.83, -0.71, -0.56, -0.38, -0.19 };
+    //float sine_array[] = {0, 0.19, 0.38, 0.56, 0.71, 0.83, 0.92, 0.98, 1.0, 0.98, 0.92, 0.83, 0.71, 0.56, 0.38,
+            //              0.19, 0, -0.19, -0.38, -0.56, -0.71, -0.83, -0.92, -0.98, -1.0, -0.98, -0.92, -0.83, -0.71, -0.56, -0.38, -0.19 };
+    float sine_array[] = { 0x0, 0x0, 0x5, 0xa, 0x12, 0x16, 0x27, 0x33, 0x40, 0x4c, 0x58, 0x63, 0x6d, 0x75, 0x7a, 0x7f, 0x7f, 0x7f, 0x7a, 0x75, 0x6d, 0x63, 0x58, 0x4c, 0x40, 0x33, 0x27, 0x16, 0x12, 0xa, 0x5, 0x0};
+
     printf("Started pwm threat");
     while(1){
         //sem_wait(&sem_pwmon); // wait for pwm to be turned on
         for (i_dds = 0; i_dds < 32; ++i_dds) {
-            //pwm_reg_write(PWM_DAT1, (1280+(1280*sine_array[i_dds])));
-            pwm_reg_write(PWM_DAT1, (160+(160*sine_array[i_dds])));
-            //pwm_reg_write(PWM_DAT1, (10+(10*sine_array[i_dds])));
+      //      pwm_reg_write(PWM_DAT1, (64+(64*sine_array[i_dds])));
+            pwm_reg_write(PWM_DAT1, sine_array[i_dds]);
 
 
 
@@ -113,16 +114,16 @@ init_pwm(){
         printf("Error: Failed to initialize PWM: %s\n", strerror(abs(ret)));
         exit(ret);
     }
-    pwm_reg_write(PWM_CTL, 0x0);
+    pwm_reg_write(PWM_CTL, 0x00);
     pwm_reg_write(PWM_STA, 0x202);
     pwm_reg_write(PWM_DMAC, 0x707);
-    pwm_reg_write(PWM_DAT1, 0x6f);
+    pwm_reg_write(PWM_DAT1, 0x01);
     pwm_reg_write(PWM_FIF1, 0x70776d30);
     pwm_reg_write(PWM_RNG2, 0x20);
     pwm_reg_write(PWM_DAT2, 0x00);
 
 
-    pwm_reg_write(PWM_RNG1, 0x13f);
+    pwm_reg_write(PWM_RNG1, 0x7f);
     //pwm_reg_write(PWM_RNG1, 0x4f);
     //pwm_reg_write(PWM_RNG1, 0x13);
 

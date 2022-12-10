@@ -1,15 +1,7 @@
-/* ------------------------------------------------------------------
- * --  _____       ______  _____                                    -
- * -- |_   _|     |  ____|/ ____|                                   -
- * --   | |  _ __ | |__  | (___    Institute of Embedded Systems    -
- * --   | | | '_ \|  __|  \___ \   Zurich University of             -
- * --  _| |_| | | | |____ ____) |  Applied Sciences                 -
- * -- |_____|_| |_|______|_____/   8401 Winterthur, Switzerland     -
- * ------------------------------------------------------------------
- * --
- * -- File:	cli.c
- * -- Date:	05.02.2017
- * -- Author:	rosn
+ /* --
+ * -- File:	gpio.h
+ * -- Date:	09.12.2022
+ * -- Author:	gelk
  * --
  * ------------------------------------------------------------------
  */
@@ -43,8 +35,7 @@
 #define GPIO_CLR0          (0x00000028) //GPIOCLR0 offset
 #define GPIO_LVL0          (0x00000034) //GPIOCLR0 offset
 
-// NEW FROM HERE //
-
+#define DC_LOOP 6
 
 #define MCP_IODIR   (0x00) // 1=input, 0=output
 #define MCP_IPOL    (0x01)
@@ -78,13 +69,16 @@
 
 
 //Function declarations
-int mmap_virtual_base();
-int read_ctrl_register(uint8_t register_addr, uint8_t device_addr);
+uint8_t mmap_virtual_base();
+uint8_t read_ctrl_register(uint8_t register_addr, uint8_t device_addr);
 void write_ctrl_register(uint8_t device_addr, uint8_t register_addr, uint8_t register_data);
 void set_connections(uint8_t from, uint8_t to);
 uint8_t hex2lines(uint8_t hex);
 uint8_t hex2notlines(uint8_t hex);
 void write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value);
+int8_t wait_select(uint8_t sec, uint8_t usec, uint8_t gpio);
+int8_t wait_select_notime(uint8_t gpio);
+
 
 void init_gpios();
 

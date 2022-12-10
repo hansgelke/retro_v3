@@ -1,65 +1,15 @@
-/* ------------------------------------------------------------------
- * --  _____       ______  _____                                    -
- * -- |_   _|     |  ____|/ ____|                                   -
- * --   | |  _ __ | |__  | (___    Institute of Embedded Systems    -
- * --   | | | '_ \|  __|  \___ \   Zurich University of             -
- * --  _| |_| | | | |____ ____) |  Applied Sciences                 -
- * -- |_____|_| |_|______|_____/   8401 Winterthur, Switzerland     -
- * ------------------------------------------------------------------
- * --
- * -- File:	cli.c
- * -- Date:	05.02.2017
- * -- Author:	rosn
+/* --
+ * -- File:	gpio.c
+ * -- Date:	09.12.2022
+ * -- Author:	gelk
  * --
  * ------------------------------------------------------------------
  */
-#include <sys/mman.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <errno.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <linux/i2c-dev.h>
-#include <sys/ioctl.h>
 #include "gpio.h"
-
-// Hardware definitions
-#define GPIO_IN 0x0
-#define GPIO_OUT 0x1
-#define GPIO_EDGE_FALLING 0x0
-#define GPIO_EDGE_RISING 0x1
-#define GPIO_HIGH_DETECT 0x2
-#define GPIO_LOW_DETECT 0x3
-
-// Macros to calculate register offsets
-#define GPFSELX_OFFSET(pin) (pin / 10 * 0x04)
-#define FSELX_OFFSET(pin) (pin % 10 * 3)
-
-#define GPIO_BASE_ADDR   	   (0xfe200000) // base of GPIO page
-#define GPIO_FSEL1         (0x00000004) // GPIOFSEL1 offset
-#define GPIO_FSEL2         (0x00000008) // GPIOFSEL1 offset
-#define GPIO_SET0          (0x0000001c) // GPIOSET0 offset
-#define GPIO_CLR0          (0x00000028) //GPIOCLR0 offset
-#define GPIO_LVL0          (0x00000034) //GPIOCLR0 offset
-
-#define MCP_IODIR   (0x00) // 1=input, 0=output
-#define MCP_IPOL    (0x01)
-#define MCP_GPINTEN (0x02)
-#define MCP_DEFVAL  (0x03)
-#define MCP_INTCON  (0x04)
-#define MCP_IOCON   (0x05)
-#define MCP_GPPU    (0x06)
-#define MCP_INTF    (0x07)
-#define MCP_INTCAP  (0x08)
-#define MCP_GPIO    (0x09)
-#define MCP_OLAT    (0x0a)
-
 
 void *virtual_gpio_base;
 
-int fd;
+uint8_t fd;
 
 
 
@@ -84,9 +34,9 @@ int fd;
 /****************************************************************
  * mmap virtual base calculation
  ****************************************************************/
-int mmap_virtual_base()
+uint8_t mmap_virtual_base()
 {
-    int  m_mfd;
+    uint8_t  m_mfd;
 
     if ((m_mfd = open("/dev/mem", O_RDWR)) < 0)
     {
@@ -108,7 +58,7 @@ int mmap_virtual_base()
 /*
  * Init GPIO pins
 */
-static void mmap_gpio_direction( int gpio, int direction)
+static void mmap_gpio_direction( uint8_t gpio, uint8_t direction)
 {
     uint32_t *gpio_reg;
 
@@ -135,7 +85,7 @@ static void mmap_gpio_direction( int gpio, int direction)
 
 }
 
-static void mmap_gpio_set( int gpio, int value)
+static void mmap_gpio_set( uint8_t gpio, uint8_t value)
 {
     uint32_t *gpio_reg;
 
@@ -201,7 +151,7 @@ write_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint8_t write_data){
  * Function Reads the I2C Register
  ***************************************************************************/
 
-int
+uint8_t
 read_ctrl_register(uint8_t device_addr, uint8_t mcp_reg){
 
     uint8_t register_data = 0;
@@ -278,10 +228,28 @@ void init_gpios(){
 // Set the Connect control register to output and off
     write_ctrl_register(CONNECT_CTRL, MCP_IODIR, 0x00);
     write_ctrl_register(CONNECT_CTRL, MCP_OLAT, 0x00);
-// DTMF and LOOP Detect are input registers
+
     //DTMF_READ set 0-3 as read, 4-7 as write
     write_ctrl_register(DTMF_READ, MCP_IODIR, 0x0f);
+    //LOOP Detect are input registers
     write_ctrl_register(LOOP_DETECT, MCP_IODIR, 0xff);
+    // Polarity of the input signal
+    write_ctrl_register(LOOP_DETECT, MCP_IPOL, 0x00);
+    //Enables interrupts
+    write_ctrl_register(LOOP_DETECT, MCP_GPINTEN, 0xff);
+    //controlls rising or falling, not relevant since we
+    //interrupt on both edges
+    write_ctrl_register(LOOP_DETECT, MCP_DEFVAL, 0xff);
+    write_ctrl_register(LOOP_DETECT, MCP_INTCON, 0xff);
+    //Genearte Interrupt on rising and falling edge
+    write_ctrl_register(LOOP_DETECT, MCP_IOCON, 0x02);
+    write_ctrl_register(LOOP_DETECT, MCP_GPPU, 0x00);
+    write_ctrl_register(LOOP_DETECT, MCP_INTF, 0xff);
+    write_ctrl_register(LOOP_DETECT, MCP_GPIO, 0xff);
+
+
+
+
 
 
 }
@@ -367,6 +335,49 @@ write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value
         printf("Failed to write to the i2c bus.\n");
 
     close(fd);
+}
+
+//Using pseudo interrupts via file system
+int8_t wait_select(uint8_t sec, uint8_t usec, uint8_t gpio)
+{
+    int filepath = 0;
+    char str[100];
+    fd_set fd;
+    int retval;
+    struct timeval tv;
+
+    sprintf(str,"/sys/class/gpio/gpio%d/value",gpio);
+    filepath = open(str, O_RDONLY);
+    FD_ZERO(&fd);
+    FD_SET(filepath, &fd);
+    tv.tv_sec = sec;
+    tv.tv_usec = usec;
+    read(filepath, str, 100);     // clear edge trigger with "read"
+    retval = select(filepath+1, NULL, NULL, &fd, &tv);
+    //close(filepath);
+    FD_CLR(filepath, &fd);
+
+    return retval;
+}
+
+//Using pseudo interrupts via file system
+int8_t wait_select_notime(uint8_t gpio)
+{
+    int filepath = 0;
+    char str[100];
+    fd_set fd;
+    int retval;
+
+    sprintf(str,"/sys/class/gpio/gpio%d/value",gpio);
+    filepath = open(str, O_RDONLY);
+    FD_ZERO(&fd);
+    FD_SET(filepath, &fd);
+    read(filepath, str, 100);     // clear edge trigger with "read"
+    retval = select(filepath+1, NULL, NULL, &fd, NULL);
+    //close(filepath);
+    FD_CLR(filepath, &fd);
+
+    return retval;
 }
 
 
