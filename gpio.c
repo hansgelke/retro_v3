@@ -27,9 +27,59 @@ uint8_t fd;
     mmap_gpio_set(13, 0);
     mmap_gpio_set(25, 1);
     mmap_gpio_set(5, 1);*/
+/****************************************************************
+ * Init Function for File based control
+ ****************************************************************/
 
+int8_t file_gpio_init (uint8_t gpio, char *direction)
+{
+    FILE *fp;
+    char str[100];
 
+    // Export gpio
+    sprintf(str, "/sys/class/gpio/export");
+    fp = fopen(str, "w");
+    if (fp== NULL) {
+        printf("Error opening file in gpio_init %s\n", str);
+        return 1;
+    }
+    fprintf(fp, "%i", gpio);
+    fflush(fp);
+    fclose(fp);
 
+    // Set direction
+    sprintf(str, "/sys/class/gpio/gpio%i/direction", gpio);
+    fp = fopen(str, "w");
+    if (fp== NULL) {
+        printf("Error opening file in set direction %s\n", str);
+        return -1;
+    }
+    fprintf(fp, "%s", direction);
+    fflush(fp);
+    fclose(fp);
+
+    return 0;
+}
+
+/****************************************************************
+ *Old: set_edge_rising()
+ ****************************************************************/
+
+int set_edge_rising(int gpio)
+{
+
+    FILE *fp;
+    char str[100];
+    sprintf(str,"/sys/class/gpio/gpio%d/edge",gpio);
+    fp = fopen(str,"w");
+    if(fp== NULL){
+        printf("Error opening file\n");
+        return -1;
+    }
+    fprintf(fp,"rising");
+    fclose(fp);
+    return 0;
+}
 
 /****************************************************************
  * mmap virtual base calculation
@@ -216,6 +266,25 @@ void set_connections(uint8_t from, uint8_t to){
 }
 
 void init_gpios(){
+
+   int8_t err;
+
+    /****************************************************************
+     * Initialize DC_LOOP Pin
+     ****************************************************************/
+
+    //Initialize DC_LOOP as IN and Rising Edge
+        err = file_gpio_init(DC_LOOP, "in");
+        if (err < 0) {
+            printf("ERROR: Failed to initialize DC_LOOP");
+            exit(EXIT_FAILURE);
+        }
+        err = set_edge_rising(DC_LOOP);
+        if (err < 0) {
+            printf("ERROR: Failed to initialize DC_LOOP");
+            exit(EXIT_FAILURE);
+        }
+
     //Set Matrix Controllers to Output
     write_ctrl_register(MATRIX_FROM, MCP_IODIR, 0x00);
     write_ctrl_register(MATRIX_TO, MCP_IODIR, 0x00);
@@ -228,9 +297,12 @@ void init_gpios(){
 // Set the Connect control register to output and off
     write_ctrl_register(CONNECT_CTRL, MCP_IODIR, 0x00);
     write_ctrl_register(CONNECT_CTRL, MCP_OLAT, 0x00);
-
     //DTMF_READ set 0-3 as read, 4-7 as write
     write_ctrl_register(DTMF_READ, MCP_IODIR, 0x0f);
+    /*******************************************************
+    *** LOOP Detect Register
+    *****************************************************/
+
     //LOOP Detect are input registers
     write_ctrl_register(LOOP_DETECT, MCP_IODIR, 0xff);
     // Polarity of the input signal
@@ -240,16 +312,10 @@ void init_gpios(){
     //controlls rising or falling, not relevant since we
     //interrupt on both edges
     write_ctrl_register(LOOP_DETECT, MCP_DEFVAL, 0xff);
-    write_ctrl_register(LOOP_DETECT, MCP_INTCON, 0xff);
+    write_ctrl_register(LOOP_DETECT, MCP_INTCON, 0x00);
     //Genearte Interrupt on rising and falling edge
     write_ctrl_register(LOOP_DETECT, MCP_IOCON, 0x02);
     write_ctrl_register(LOOP_DETECT, MCP_GPPU, 0x00);
-    write_ctrl_register(LOOP_DETECT, MCP_INTF, 0xff);
-    write_ctrl_register(LOOP_DETECT, MCP_GPIO, 0xff);
-
-
-
-
 
 
 }

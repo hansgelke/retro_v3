@@ -35,7 +35,7 @@
 #define GPIO_CLR0          (0x00000028) //GPIOCLR0 offset
 #define GPIO_LVL0          (0x00000034) //GPIOCLR0 offset
 
-#define DC_LOOP 6
+#define DC_LOOP (0x06)
 
 #define MCP_IODIR   (0x00) // 1=input, 0=output
 #define MCP_IPOL    (0x01)
@@ -78,7 +78,7 @@ uint8_t hex2notlines(uint8_t hex);
 void write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value);
 int8_t wait_select(uint8_t sec, uint8_t usec, uint8_t gpio);
 int8_t wait_select_notime(uint8_t gpio);
-
+int8_t file_gpio_init (uint8_t gpio, char *direction);
 
 void init_gpios();
 
