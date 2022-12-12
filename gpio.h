@@ -13,6 +13,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <stdbool.h>
 #include <linux/i2c-dev.h>
 #include <sys/ioctl.h>
 
@@ -76,8 +77,7 @@ void set_connections(uint8_t from, uint8_t to);
 uint8_t hex2lines(uint8_t hex);
 uint8_t hex2notlines(uint8_t hex);
 void write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value);
-int8_t wait_select(uint8_t sec, uint8_t usec, uint8_t gpio);
-int8_t wait_select_notime(uint8_t gpio);
+int8_t wait_select(uint8_t sec, uint8_t usec, uint8_t gpio, bool timeout);
 int8_t file_gpio_init (uint8_t gpio, char *direction);
 
 void init_gpios();

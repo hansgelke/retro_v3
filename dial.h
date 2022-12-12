@@ -22,7 +22,7 @@
 #define loop_low_error (0xfb)
 #define hangup_error (0xfd)
 #define dial_no_dial (0xfa)
-#define no_error (0x00)
+#define dial_complete (0x00)
 
 uint8_t dial_error;
 uint8_t number_dialed;

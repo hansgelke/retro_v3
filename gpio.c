@@ -62,7 +62,7 @@ int8_t file_gpio_init (uint8_t gpio, char *direction)
 }
 
 /****************************************************************
- *Old: set_edge_rising()
+ set_edge_rising()
  ****************************************************************/
 
 int set_edge_rising(int gpio)
@@ -404,7 +404,7 @@ write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value
 }
 
 //Using pseudo interrupts via file system
-int8_t wait_select(uint8_t sec, uint8_t usec, uint8_t gpio)
+int8_t wait_select(uint8_t sec, uint8_t usec, uint8_t gpio, bool timeout)
 {
     int filepath = 0;
     char str[100];
@@ -418,28 +418,13 @@ int8_t wait_select(uint8_t sec, uint8_t usec, uint8_t gpio)
     FD_SET(filepath, &fd);
     tv.tv_sec = sec;
     tv.tv_usec = usec;
-    read(filepath, str, 100);     // clear edge trigger with "read"
+    read(filepath, str, 100);   // clear edge trigger with "read"
+    if (timeout == true){
     retval = select(filepath+1, NULL, NULL, &fd, &tv);
-    //close(filepath);
-    FD_CLR(filepath, &fd);
-
-    return retval;
-}
-
-//Using pseudo interrupts via file system
-int8_t wait_select_notime(uint8_t gpio)
-{
-    int filepath = 0;
-    char str[100];
-    fd_set fd;
-    int retval;
-
-    sprintf(str,"/sys/class/gpio/gpio%d/value",gpio);
-    filepath = open(str, O_RDONLY);
-    FD_ZERO(&fd);
-    FD_SET(filepath, &fd);
-    read(filepath, str, 100);     // clear edge trigger with "read"
+    }
+    else {
     retval = select(filepath+1, NULL, NULL, &fd, NULL);
+    }
     //close(filepath);
     FD_CLR(filepath, &fd);
 
