@@ -15,4 +15,6 @@
 
 void *tf_extern();
 void *tf_ext_timer();
+void *tf_main_fsm();
+
 

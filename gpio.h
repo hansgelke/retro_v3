@@ -45,7 +45,7 @@
 #define LOOP_CLOSED_N_5 (9)
 #define LOOP_CLOSED_N_6 (25)
 #define LOOP_CLOSED_N_7 (17)
-#define LOOP_CLOSED_N_8 (29)
+#define LOOP_CLOSED_N_8 (5)
 #define RING_INDICATOR (13)
 #define DTMF_INT (16)
 

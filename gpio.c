@@ -255,7 +255,7 @@ void set_connections(uint8_t from, uint8_t to){
 
 void init_gpios(){
 
-   int8_t gpio_err_msg [12];
+    int8_t gpio_err_msg [12]={0,0,0,0,0,0,0,0,0,0,0,0};
    uint8_t i;
 
     /****************************************************************
@@ -264,28 +264,28 @@ void init_gpios(){
 
     //Initialize GPIOs as IN or OUT
         gpio_err_msg[0] = file_gpio_init(DC_LOOP_INT, "in");
-//        gpio_err_msg[1] = file_gpio_init(LOOP_CLOSED_N_1, "in");
-//        gpio_err_msg[2] = file_gpio_init(LOOP_CLOSED_N_2, "in");
-//        gpio_err_msg[3] = file_gpio_init(LOOP_CLOSED_N_3, "in");
-//        gpio_err_msg[4] = file_gpio_init(LOOP_CLOSED_N_4, "in");
-//        gpio_err_msg[5] = file_gpio_init(LOOP_CLOSED_N_5, "in");
-//        gpio_err_msg[6] = file_gpio_init(LOOP_CLOSED_N_6, "in");
-//        gpio_err_msg[7] = file_gpio_init(LOOP_CLOSED_N_7, "in");
-//        gpio_err_msg[8] = file_gpio_init(LOOP_CLOSED_N_8, "in");
-//        gpio_err_msg[9] = file_gpio_init(DTMF_INT, "in");
-//        gpio_err_msg[10] = file_gpio_init(RING_INDICATOR, "in");
+        gpio_err_msg[1] = file_gpio_init(LOOP_CLOSED_N_1, "in");
+        gpio_err_msg[2] = file_gpio_init(LOOP_CLOSED_N_2, "in");
+        gpio_err_msg[3] = file_gpio_init(LOOP_CLOSED_N_3, "in");
+        gpio_err_msg[4] = file_gpio_init(LOOP_CLOSED_N_4, "in");
+        gpio_err_msg[5] = file_gpio_init(LOOP_CLOSED_N_5, "in");
+        gpio_err_msg[6] = file_gpio_init(LOOP_CLOSED_N_6, "in");
+        gpio_err_msg[7] = file_gpio_init(LOOP_CLOSED_N_7, "in");
+        gpio_err_msg[8] = file_gpio_init(LOOP_CLOSED_N_8, "in");
+        gpio_err_msg[9] = file_gpio_init(DTMF_INT, "in");
+        gpio_err_msg[10] = file_gpio_init(RING_INDICATOR, "in");
 
         //Initialize GPIOs with edge trigger
 
         gpio_err_msg[11] = set_edge_rising(DC_LOOP_INT);
 
-//        for (i =1; i < 12; i++)
-//        {
-//            if (gpio_err_msg[i] < 0) {
-//                printf("ERROR: Failed to initialize GPIOs as in or out");
-//                exit(EXIT_FAILURE);
-//            }
-//}
+        for (i =0; i < 12; i++)
+        {
+            if (gpio_err_msg[i] < 0) {
+                printf("ERROR: Failed to initialize GPIOs as in or out");
+                exit(EXIT_FAILURE);
+            }
+}
         /****************************************************************
          * Initialize MCP I2C Controller Pins
          ****************************************************************/

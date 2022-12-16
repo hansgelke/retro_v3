@@ -68,9 +68,9 @@ void *tf_ext_timer()
 
         //If Ring indicator reports ring signal set ring counter
         // if (mmap_gpio_read(RING_INDICATOR) == 1) {
-        //if (gpio_read(LOOP_CLOSED_N_1) == 1){
+        if (gpio_read(LOOP_CLOSED_N_1) == 1){
             ring_timer = MAX_RING;
-        //}
+        }
         //count down delayed by usleep
         if (ring_timer > 0) {
             usleep(500000);
