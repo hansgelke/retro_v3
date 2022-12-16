@@ -19,14 +19,14 @@ void *tf_rotary()
 
 
     while(1){ //loop and wait for interrupts
-      //  loop_interrupt = wait_select(tv_sec, tv_usec, DC_LOOP, timeout);
+      //  loop_interrupt = wait_select(tv_sec, tv_usec, DC_LOOP_INT, timeout);
 
         switch (rotary_state) {
 
         case st_rotary_idle:
-            //Arm interrupt without timeout for first pulse
+            //Arm interrupt without currently no timeout for first pulse
             timeout = false;
-            loop_interrupt = wait_select(tv_sec, tv_usec, DC_LOOP, timeout);
+            loop_interrupt = wait_select(tv_sec, tv_usec, DC_LOOP_INT, timeout);
             //Clear MCP chip interrupt line
             trigger = read_ctrl_register(LOOP_DETECT, MCP_INTCAP);
             if (loop_interrupt > 0) {
@@ -44,11 +44,11 @@ void *tf_rotary()
             break;
 
         case st_timer_hangup:
-            //Arm interrupt with timeout for subsequent pulse
-            tv_sec = 0;
-            tv_usec = 72000;
-            timeout = false;
-            loop_interrupt = wait_select(tv_sec, tv_usec, DC_LOOP, timeout);
+            //Arm interrupt with timeout. A timeout means user hangup instead of dialing.
+            tv_sec = 1;
+            tv_usec = 000000;
+            timeout = true;
+            loop_interrupt = wait_select(tv_sec, tv_usec, DC_LOOP_INT, timeout);
             //Clear MCP chip interrupt line
             trigger = read_ctrl_register(LOOP_DETECT, MCP_INTCAP);
             // if interrupt occured, wait in dialcompl until no more pulses come
@@ -68,11 +68,12 @@ void *tf_rotary()
             break;
 
         case st_timer_dialcompl:
-            //Arm interrupt with timeout for following pulse
-            tv_sec = 0;
-            tv_usec = 80000;
+            //Arm interrupt with timeout. A timeout means, there are no more dial pulses
+            //dialing is complete
+            tv_sec = 1;
+            tv_usec = 500000;
             timeout = true;
-            loop_interrupt = wait_select(tv_sec, tv_usec, DC_LOOP, timeout);
+            loop_interrupt = wait_select(tv_sec, tv_usec, DC_LOOP_INT, timeout);
             //Clear MCP chip interrupt line
             trigger = read_ctrl_register(LOOP_DETECT, MCP_INTCAP);
 

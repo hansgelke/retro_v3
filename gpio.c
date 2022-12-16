@@ -12,21 +12,6 @@ void *virtual_gpio_base;
 uint8_t fd;
 
 
-
-/*  mmap_gpio_direction(25, GPIO_OUT);
-    mmap_gpio_direction(5, GPIO_OUT);
-    mmap_gpio_direction(12, GPIO_OUT);
-    mmap_gpio_direction(13, GPIO_OUT);
-
-
-    mmap_gpio_set(12, 1);
-    mmap_gpio_set(13, 1);
-    mmap_gpio_set(25, 0);
-    mmap_gpio_set(5, 0);
-    mmap_gpio_set(12, 0);
-    mmap_gpio_set(13, 0);
-    mmap_gpio_set(25, 1);
-    mmap_gpio_set(5, 1);*/
 /****************************************************************
  * Init Function for File based control
  ****************************************************************/
@@ -111,23 +96,18 @@ uint8_t mmap_virtual_base()
 static void mmap_gpio_direction( uint8_t gpio, uint8_t direction)
 {
     uint32_t *gpio_reg;
-
-
     /* set io direction */
     if (gpio <= 9)
     {
         gpio_reg = (uint32_t *) (virtual_gpio_base);
-
     }
     else if ((gpio > 9) & (gpio < 20))
     {
         gpio_reg = (uint32_t *) (virtual_gpio_base + GPIO_FSEL1);
-
     }
     else
     {
         gpio_reg = (uint32_t *) (virtual_gpio_base + GPIO_FSEL2);
-
     }
 
     *gpio_reg &=  ~(0x7 << FSELX_OFFSET(gpio));              // Clear 3 bits of gpio
@@ -135,10 +115,9 @@ static void mmap_gpio_direction( uint8_t gpio, uint8_t direction)
 
 }
 
-static void mmap_gpio_set( uint8_t gpio, uint8_t value)
+void mmap_gpio_set( uint8_t gpio, uint8_t value)
 {
     uint32_t *gpio_reg;
-
     if (value == 1)
     {
         gpio_reg = (uint32_t *) (virtual_gpio_base + GPIO_SET0);
@@ -147,8 +126,17 @@ static void mmap_gpio_set( uint8_t gpio, uint8_t value)
     {
         gpio_reg = (uint32_t *) (virtual_gpio_base + GPIO_CLR0);
     }
-
     *gpio_reg =  (0x1 << gpio);
+}
+
+uint32_t mmap_gpio_read(uint32_t gpio)
+{
+    uint32_t value;
+    uint32_t *gpio_reg;
+        gpio_reg = (uint32_t *) (virtual_gpio_base + GPIO_LVL0);
+    value = *gpio_reg;
+
+return value ;
 }
 
 /****************************************************************
@@ -267,23 +255,40 @@ void set_connections(uint8_t from, uint8_t to){
 
 void init_gpios(){
 
-   int8_t err;
+   int8_t gpio_err_msg [12];
+   uint8_t i;
 
     /****************************************************************
-     * Initialize DC_LOOP Pin
+     * Initialize RPI I/Os
      ****************************************************************/
 
-    //Initialize DC_LOOP as IN and Rising Edge
-        err = file_gpio_init(DC_LOOP, "in");
-        if (err < 0) {
-            printf("ERROR: Failed to initialize DC_LOOP");
-            exit(EXIT_FAILURE);
-        }
-        err = set_edge_rising(DC_LOOP);
-        if (err < 0) {
-            printf("ERROR: Failed to initialize DC_LOOP");
-            exit(EXIT_FAILURE);
-        }
+    //Initialize GPIOs as IN or OUT
+        gpio_err_msg[0] = file_gpio_init(DC_LOOP_INT, "in");
+//        gpio_err_msg[1] = file_gpio_init(LOOP_CLOSED_N_1, "in");
+//        gpio_err_msg[2] = file_gpio_init(LOOP_CLOSED_N_2, "in");
+//        gpio_err_msg[3] = file_gpio_init(LOOP_CLOSED_N_3, "in");
+//        gpio_err_msg[4] = file_gpio_init(LOOP_CLOSED_N_4, "in");
+//        gpio_err_msg[5] = file_gpio_init(LOOP_CLOSED_N_5, "in");
+//        gpio_err_msg[6] = file_gpio_init(LOOP_CLOSED_N_6, "in");
+//        gpio_err_msg[7] = file_gpio_init(LOOP_CLOSED_N_7, "in");
+//        gpio_err_msg[8] = file_gpio_init(LOOP_CLOSED_N_8, "in");
+//        gpio_err_msg[9] = file_gpio_init(DTMF_INT, "in");
+//        gpio_err_msg[10] = file_gpio_init(RING_INDICATOR, "in");
+
+        //Initialize GPIOs with edge trigger
+
+        gpio_err_msg[11] = set_edge_rising(DC_LOOP_INT);
+
+//        for (i =1; i < 12; i++)
+//        {
+//            if (gpio_err_msg[i] < 0) {
+//                printf("ERROR: Failed to initialize GPIOs as in or out");
+//                exit(EXIT_FAILURE);
+//            }
+//}
+        /****************************************************************
+         * Initialize MCP I2C Controller Pins
+         ****************************************************************/
 
     //Set Matrix Controllers to Output
     write_ctrl_register(MATRIX_FROM, MCP_IODIR, 0x00);
@@ -431,4 +436,42 @@ int8_t wait_select(uint8_t sec, uint8_t usec, uint8_t gpio, bool timeout)
     return retval;
 }
 
+bool
+loop_detected(){
+
+uint8_t read_loop;
+bool loop_closed = false;
+
+ read_loop = read_ctrl_register(LOOP_DETECT, MCP_GPIO);
+    if (read_loop == 0) {
+        loop_closed = true;
+    }
+    else {
+            loop_closed = false;
+        }
+    return loop_closed;
+    }
+
+/****************************************************************
+ * Function reads Single GPIO via File System
+ ****************************************************************/
+
+int32_t gpio_read (uint32_t gpio)
+{
+    FILE *fp;
+    char str[100];
+    int32_t ret;
+
+    sprintf(str, "/sys/class/gpio/gpio%i/value", gpio);
+    fp = fopen(str, "r");
+    if (fp== NULL) {
+        printf("Error opening file in gpio_read %s\n", str);
+        return -1;
+    }
+    fread(str, 101, 1, fp);
+    sscanf(str, "%i", &ret);
+    fclose(fp);
+
+    return ret;
+}
 

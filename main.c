@@ -31,6 +31,7 @@
 #include "tones.h"
 #include "signals.h"
 #include "dial.h"
+#include "extern.h"
 
 
 
@@ -50,18 +51,21 @@ int main(void) {
     init_pwm();
     sem_init(&sem_pwmon,0,0);
 
-    pthread_t t_pwm, t_menue, t_tone_gen, t_generate_signals, t_rotary ;
-    int iret1;
-    int i_dds = 0;
-    float sine_array[] = {0, 0.19, 0.38, 0.56, 0.71, 0.83, 0.92, 0.98, 1.0, 0.98, 0.92, 0.83, 0.71, 0.56, 0.38,
-                          0.19, 0, -0.19, -0.38, -0.56, -0.71, -0.83, -0.92, -0.98, -1.0, -0.98, -0.92, -0.83, -0.71, -0.56, -0.38, -0.19 };
+    /************************************************************
+     *************** Initialize Tasks ***************************
+     ************************************************************/
+
+    pthread_t t_pwm, t_menue, t_tone_gen, t_generate_signals, t_rotary, t_extern; //t_ext_timer ;
+    uint8_t iret1;
 
     iret1 = pthread_create(&t_pwm, NULL, &tf_pwm, NULL);
     iret1 = pthread_create(&t_rotary, NULL, &tf_rotary, NULL);
-
+    iret1 = pthread_create(&t_extern, NULL, &tf_ext_timer, NULL);
     iret1 = pthread_create(&t_menue, NULL, &tf_menue, NULL);
     iret1 = pthread_create(&t_tone_gen, NULL, &tf_tone_gen, NULL);
     iret1 = pthread_create(&t_generate_signals, NULL, &tf_generate_signals, NULL);
+    //iret1 = pthread_create(&t_ext_timer, NULL, &tf_ext_timer, NULL);
+
 
 
     pthread_join(t_pwm, NULL);
@@ -69,6 +73,9 @@ int main(void) {
     pthread_join(t_menue, NULL);
     pthread_join(t_tone_gen, NULL);
     pthread_join(t_generate_signals, NULL);
+    pthread_join(t_extern, NULL);
+    //pthread_join(t_ext_timer, NULL);
+
 
 
 
