@@ -10,7 +10,7 @@
 #include <gst/gst.h>
 
 
-#define MAX_RING (1000)
+#define MAX_RING (600)
 
 
 void *tf_extern();

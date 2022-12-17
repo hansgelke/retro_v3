@@ -129,12 +129,12 @@ void mmap_gpio_set( uint8_t gpio, uint8_t value)
     *gpio_reg =  (0x1 << gpio);
 }
 
-uint32_t mmap_gpio_read(uint32_t gpio)
+uint8_t mmap_gpio_read(uint8_t gpio)
 {
-    uint32_t value;
+    uint8_t value;
     uint32_t *gpio_reg;
         gpio_reg = (uint32_t *) (virtual_gpio_base + GPIO_LVL0);
-    value = *gpio_reg;
+    value = (*gpio_reg);
 
 return value ;
 }
@@ -273,7 +273,7 @@ void init_gpios(){
         gpio_err_msg[7] = file_gpio_init(LOOP_CLOSED_N_7, "in");
         gpio_err_msg[8] = file_gpio_init(LOOP_CLOSED_N_8, "in");
         gpio_err_msg[9] = file_gpio_init(DTMF_INT, "in");
-        gpio_err_msg[10] = file_gpio_init(RING_INDICATOR, "in");
+        gpio_err_msg[10] = file_gpio_init(RING_INDICATOR_N, "in");
 
         //Initialize GPIOs with edge trigger
 
@@ -438,12 +438,11 @@ int8_t wait_select(uint8_t sec, uint8_t usec, uint8_t gpio, bool timeout)
 
 bool
 loop_detected(){
-
 uint8_t read_loop;
 bool loop_closed = false;
 
  read_loop = read_ctrl_register(LOOP_DETECT, MCP_GPIO);
-    if (read_loop == 0) {
+    if (read_loop < 0xff) {
         loop_closed = true;
     }
     else {

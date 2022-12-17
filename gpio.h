@@ -46,7 +46,7 @@
 #define LOOP_CLOSED_N_6 (25)
 #define LOOP_CLOSED_N_7 (17)
 #define LOOP_CLOSED_N_8 (5)
-#define RING_INDICATOR (13)
+#define RING_INDICATOR_N (13)
 #define DTMF_INT (16)
 
 
@@ -92,7 +92,7 @@ uint8_t hex2notlines(uint8_t hex);
 void write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value);
 int8_t wait_select(uint8_t sec, uint8_t usec, uint8_t gpio, bool timeout);
 int8_t file_gpio_init (uint8_t gpio, char *direction);
-uint32_t mmap_gpio_read( uint32_t gpio);
+uint8_t mmap_gpio_read( uint8_t gpio);
 void mmap_gpio_set( uint8_t gpio, uint8_t value);
 int32_t gpio_read (uint32_t gpio);
 

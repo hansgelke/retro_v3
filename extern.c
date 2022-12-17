@@ -22,33 +22,39 @@ void *tf_main_fsm()
     while(1){
         switch (ext_state) {
         case st_ext_idle:
+            sem_init(&sem_signal,0,0);
+            //printf("EXT IDLE\n");
             if (ring_timer > 0){
                 ext_state = st_ext_ring;
-
             }
-
-
             break;
 
         case st_ext_ring:
-            if (ring_timer == 0){
-                ext_state = st_ext_idle;}
-            else if (loop_detected()){
+            sem_post(&sem_signal);
+            //printf("EXT RING\n");
+            if (loop_detected()){
                 ext_state = st_ext_accepted;
             }
+            else if (ring_timer == 0){
+                ext_state = st_ext_idle;
+            }
+
             else  {
-                ext_state = st_ext_accepted;
-
+                ext_state = st_ext_ring;
             }
-
             break;
 
         case st_ext_accepted:
+            //printf("EXT ACCEPTED\n");
+            sem_init(&sem_signal,0,0);
 
-            ext_state = st_ext_idle;
-
+            if (loop_detected()){
+                ext_state = st_ext_accepted;
+            }
+            else {
+                ext_state = st_ext_idle;
+            }
             break;
-
         }
 
     }
@@ -67,24 +73,19 @@ void *tf_ext_timer()
 
 
         //If Ring indicator reports ring signal set ring counter
-        // if (mmap_gpio_read(RING_INDICATOR) == 1) {
-        if (gpio_read(LOOP_CLOSED_N_1) == 1){
+
+        //if (mmap_gpio_read(LOOP_CLOSED_N_1) == 1) {
+
+        usleep(10000);
+        if (gpio_read(RING_INDICATOR_N) == 0){
             ring_timer = MAX_RING;
         }
         //count down delayed by usleep
-        if (ring_timer > 0) {
-            usleep(500000);
+        else if (ring_timer > 0) {
             ring_timer-- ;
         }
         else{
             ring_timer = 0;
         }
-
     }
-
-
-
-
-
-
 }
