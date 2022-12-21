@@ -1,4 +1,4 @@
-/* ------------------------------------------------------------------
+﻿/* ------------------------------------------------------------------
  * --  _____       ______  _____                                    -
  * -- |_   _|     |  ____|/ ____|                                   -
  * --   | |  _ __ | |__  | (___    Institute of Embedded Systems    -
@@ -55,16 +55,14 @@ int main(void) {
      *************** Initialize Tasks ***************************
      ************************************************************/
 
-    pthread_t t_pwm, t_menue, t_tone_gen, t_generate_signals, t_rotary, t_extern, t_ext_timer, t_main_fsm ;
+    pthread_t t_pwm, t_menue, t_tone_gen, t_generate_signals, t_rotary, t_main_fsm ;
     uint8_t iret1;
 
     iret1 = pthread_create(&t_pwm, NULL, &tf_pwm, NULL);
     iret1 = pthread_create(&t_rotary, NULL, &tf_rotary, NULL);
-    iret1 = pthread_create(&t_extern, NULL, &tf_ext_timer, NULL);
     iret1 = pthread_create(&t_menue, NULL, &tf_menue, NULL);
     iret1 = pthread_create(&t_tone_gen, NULL, &tf_tone_gen, NULL);
     iret1 = pthread_create(&t_generate_signals, NULL, &tf_generate_signals, NULL);
-    iret1 = pthread_create(&t_ext_timer, NULL, &tf_ext_timer, NULL);
     iret1 = pthread_create(&t_main_fsm, NULL, &tf_main_fsm, NULL);
 
 
@@ -74,8 +72,6 @@ int main(void) {
     pthread_join(t_menue, NULL);
     pthread_join(t_tone_gen, NULL);
     pthread_join(t_generate_signals, NULL);
-    pthread_join(t_extern, NULL);
-    pthread_join(t_ext_timer, NULL);
     pthread_join(t_main_fsm, NULL);
 
 

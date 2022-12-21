@@ -62,11 +62,11 @@ void *tf_generate_signals()
 
             //If ringer flag is set, turn on AC for Ringer and PWM
             if (melody[note_idx].ringer_on) {
-                pwm_reg_write(PWM_CTL, 0x81);
-                write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(1));
-                write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(1));
-                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1);
-                sem_post(&sem_pwmon); // Post semaphore to start
+                //pwm_reg_write(PWM_CTL, 0x81);
+                //write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(1));
+                //write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(1));
+                //write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1);
+                //sem_post(&sem_pwmon); // Post semaphore to start
 
             }
 

@@ -10,11 +10,11 @@
 #include <gst/gst.h>
 
 
-#define MAX_RING (600)
+#define MAX_RING (900)
 
 
 void *tf_extern();
 void *tf_ext_timer();
 void *tf_main_fsm();
-
-
+void main_fsm();
+void ext_timer();
