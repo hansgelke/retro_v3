@@ -21,7 +21,7 @@
 
 
 sem_t sem_pwmon;
-
+sem_t sem_ring;
 sem_t sem_signal;
 
 //Function declarations

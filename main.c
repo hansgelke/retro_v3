@@ -50,6 +50,7 @@ int main(void) {
     init_gpios();
     init_pwm();
     sem_init(&sem_pwmon,0,0);
+    sem_init(&sem_ring,0,0);
 
     /************************************************************
      *************** Initialize Tasks ***************************
@@ -294,6 +295,8 @@ void
         else if (strcmp(line, "gbring\n") == 0){
             melody = gb_ring;
             sem_post(&sem_signal);
+            sem_post(&sem_ring);
+
         }
 
         else {
