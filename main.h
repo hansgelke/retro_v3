@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <semaphore.h>
+#include <pthread.h>
 
 
 sem_t sem_pwmon;
@@ -27,5 +28,6 @@ sem_t sem_signal;
 //Function declarations
 
 void *tf_menue();
+
 
 

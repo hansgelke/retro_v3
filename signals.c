@@ -3,6 +3,8 @@
 
 #include "gpio.h"
 
+pthread_mutex_t signals_i2c = PTHREAD_MUTEX_INITIALIZER;
+
 
 void *tf_generate_signals()
 {
@@ -58,26 +60,25 @@ void *tf_generate_signals()
                 gst_element_set_state (tone_pipeline, GST_STATE_PLAYING);
             }
             else
-            {gst_element_set_state (tone_pipeline, GST_STATE_NULL);}
+            {gst_element_set_state (tone_pipeline, GST_STATE_NULL);
+            }
 
             //If ringer flag is set, turn on AC for Ringer and PWM
             if (melody[note_idx].ringer_on) {
-                //pwm_reg_write(PWM_CTL, 0x81);
-                //write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(1));
-                //write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(1));
-                //write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1);
-                //sem_post(&sem_pwmon); // Post semaphore to start
-
+               // pthread_mutex_lock(&signals_i2c);
+                write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(1));
+              write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(1));
+                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1);
+                //pthread_mutex_unlock(&signals_i2c);
             }
 
-
-
             else {
-                //                //Turn PWM and AC off and withdraw semaphore
-                pwm_reg_write(PWM_CTL, 0x00);
-                write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(0));
-                write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(0));
-                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1);
+                //pthread_mutex_lock(&signals_i2c);
+                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0);
+                write_ctrl_register(PHONE_AC, MCP_OLAT, hex2notlines(1));
+                write_ctrl_register(PHONE_DC, MCP_OLAT, hex2lines(1));
+                //pthread_mutex_lock(&signals_i2c);
+
 
             }
 

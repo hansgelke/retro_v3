@@ -33,6 +33,7 @@
 #include "dial.h"
 #include "extern.h"
 
+pthread_mutex_t lock_i2c = PTHREAD_MUTEX_INITIALIZER;
 
 
 // Hardware definitions
@@ -228,11 +229,13 @@ void
             }
             sscanf(&line[0], "%x", &a_arg1);
 
+            pthread_mutex_lock(&lock_i2c);
             pwm_reg_write(PWM_CTL, 0x81);
-
             write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(a_arg1));
             write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(a_arg1));
             write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1);
+            pthread_mutex_unlock(&lock_i2c);
+
             sem_post(&sem_pwmon); // Post semaphore to start
 
 
@@ -240,9 +243,12 @@ void
 
         else if (strcmp(line, "rings\n") == 0){
             pwm_reg_write(PWM_CTL, 0x00);
+            pthread_mutex_lock(&lock_i2c);
             write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00);
             write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff);
             write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0);
+            pthread_mutex_unlock(&lock_i2c);
+
             sem_init(&sem_pwmon,0,0);
 
         }
@@ -293,11 +299,26 @@ void
         }
 
         else if (strcmp(line, "gbring\n") == 0){
+            printf("Ring Phone (1-8):");
+            fgets(line,100,stdin);
+            if (strcmp(line, "x\n") == 0){
+                return 0;
+            }
+            sscanf(&line[0], "%x", &a_arg1);
             melody = gb_ring;
             sem_post(&sem_signal);
             sem_post(&sem_ring);
 
+            pwm_reg_write(PWM_CTL, 0x81);
+//            pthread_mutex_lock(&lock_i2c);
+//            write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(a_arg1));
+//            write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(a_arg1));
+            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1);
+//            pthread_mutex_unlock(&lock_i2c);
+            sem_post(&sem_pwmon); // Post semaphore to start
+
         }
+
 
         else {
             printf("Unknown command '%c'\n", line[0]);
