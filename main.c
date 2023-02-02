@@ -50,8 +50,6 @@ int main(void) {
 
     init_gpios();
     init_pwm();
-    sem_init(&sem_pwmon,0,0);
-    sem_init(&sem_ring,0,0);
 
     /************************************************************
      *************** Initialize Tasks ***************************
@@ -153,7 +151,7 @@ void
                 return 0;
             }
             sscanf(&line[0], "%x %x", &a_arg1, &a_arg2);
-            mcp_rd_val = read_ctrl_register(a_arg1,a_arg2);
+            mcp_rd_val = read_ctrl_register(a_arg1,a_arg2, 3156);
             printf("Device:%x Register:%x Contains:%x \n", a_arg1, a_arg2, mcp_rd_val);
         }
 
@@ -233,23 +231,20 @@ void
             pwm_reg_write(PWM_CTL, 0x81);
             write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(a_arg1));
             write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(a_arg1));
-            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1);
+            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 3236);
             pthread_mutex_unlock(&lock_i2c);
 
-            sem_post(&sem_pwmon); // Post semaphore to start
 
 
         }
 
         else if (strcmp(line, "rings\n") == 0){
-            pwm_reg_write(PWM_CTL, 0x00);
             pthread_mutex_lock(&lock_i2c);
             write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00);
             write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff);
-            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0);
+            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 3249);
             pthread_mutex_unlock(&lock_i2c);
 
-            sem_init(&sem_pwmon,0,0);
 
         }
 
@@ -257,28 +252,24 @@ void
 
         else if (strcmp(line, "pwmon\n") == 0){
             pwm_reg_write(PWM_CTL, 0x81);
-            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1);
+            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 3260);
 
         }
 
         else if (strcmp(line, "pwmoff\n") == 0){
-            sem_init(&sem_pwmon,0,0);
-            pwm_reg_write(PWM_CTL, 0x00);
 
-            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0);
+            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 3268);
         }
 
         else if (strcmp(line, "exton\n") == 0){
-            pwm_reg_write(PWM_CTL, 0x00);
 
-            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 1);
+            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 1, 3274);
 
         }
 
         else if (strcmp(line, "extoff\n") == 0){
-            pwm_reg_write(PWM_CTL, 0x00);
 
-            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 0);
+            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 0, 3281);
 
         }
 
@@ -293,7 +284,7 @@ void
 
             melody = ger_dial;
             sem_post(&sem_signal);
-            write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1);
+            write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3296);
             write_ctrl_register(MATRIX_FROM, MCP_OLAT, hex2lines(a_arg1));
 
         }
@@ -307,15 +298,8 @@ void
             sscanf(&line[0], "%x", &a_arg1);
             melody = gb_ring;
             sem_post(&sem_signal);
-            sem_post(&sem_ring);
 
-            pwm_reg_write(PWM_CTL, 0x81);
-//            pthread_mutex_lock(&lock_i2c);
-//            write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(a_arg1));
-//            write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(a_arg1));
-            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1);
-//            pthread_mutex_unlock(&lock_i2c);
-            sem_post(&sem_pwmon); // Post semaphore to start
+
 
         }
 

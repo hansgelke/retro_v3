@@ -65,19 +65,15 @@ void *tf_generate_signals()
 
             //If ringer flag is set, turn on AC for Ringer and PWM
             if (melody[note_idx].ringer_on) {
-               // pthread_mutex_lock(&signals_i2c);
                 write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(1));
               write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(1));
-                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1);
-                //pthread_mutex_unlock(&signals_i2c);
+                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 5071);
             }
 
             else {
-                //pthread_mutex_lock(&signals_i2c);
-                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0);
+                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 5077);
                 write_ctrl_register(PHONE_AC, MCP_OLAT, hex2notlines(1));
                 write_ctrl_register(PHONE_DC, MCP_OLAT, hex2lines(1));
-                //pthread_mutex_lock(&signals_i2c);
 
 
             }

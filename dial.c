@@ -15,7 +15,7 @@ void *tf_rotary()
     static uint32_t tv_usec = 0;
     static bool timeout = false;
     //clear any interrupt
-    trigger = read_ctrl_register(LOOP_DETECT, MCP_INTCAP);
+    trigger = read_ctrl_register(LOOP_DETECT, MCP_INTCAP, 118);
 
 
     while(1){ //loop and wait for interrupts
@@ -28,7 +28,7 @@ void *tf_rotary()
             timeout = false;
             loop_interrupt = wait_select(tv_sec, tv_usec, DC_LOOP_INT, timeout);
             //Clear MCP chip interrupt line
-            trigger = read_ctrl_register(LOOP_DETECT, MCP_INTCAP);
+            trigger = read_ctrl_register(LOOP_DETECT, MCP_INTCAP, 1031);
             if (loop_interrupt > 0) {
                 //Change on the loop_int line occured - switch to check timer_hangup, needs timeout
                 number_dialed_accum = 1;
@@ -50,7 +50,7 @@ void *tf_rotary()
             timeout = true;
             loop_interrupt = wait_select(tv_sec, tv_usec, DC_LOOP_INT, timeout);
             //Clear MCP chip interrupt line
-            trigger = read_ctrl_register(LOOP_DETECT, MCP_INTCAP);
+            trigger = read_ctrl_register(LOOP_DETECT, MCP_INTCAP, 1053);
             // if interrupt occured, wait in dialcompl until no more pulses come
             if (loop_interrupt > 0) {
                 rotary_state = st_timer_dialcompl;
@@ -75,7 +75,7 @@ void *tf_rotary()
             timeout = true;
             loop_interrupt = wait_select(tv_sec, tv_usec, DC_LOOP_INT, timeout);
             //Clear MCP chip interrupt line
-            trigger = read_ctrl_register(LOOP_DETECT, MCP_INTCAP);
+            trigger = read_ctrl_register(LOOP_DETECT, MCP_INTCAP, 1078);
 
             if (loop_interrupt > 0) {
                 number_dialed_accum = number_dialed_accum + 1;

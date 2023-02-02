@@ -11,6 +11,12 @@ void *virtual_gpio_base;
 
 uint8_t fd;
 
+pthread_mutex_t gpio_mutex_1 = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t gpio_mutex_2 = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t gpio_mutex_3 = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t gpio_mutex_4 = PTHREAD_MUTEX_INITIALIZER;
+
+
 
 /****************************************************************
  * Init Function for File based control
@@ -133,10 +139,10 @@ uint8_t mmap_gpio_read(uint8_t gpio)
 {
     uint8_t value;
     uint32_t *gpio_reg;
-        gpio_reg = (uint32_t *) (virtual_gpio_base + GPIO_LVL0);
+    gpio_reg = (uint32_t *) (virtual_gpio_base + GPIO_LVL0);
     value = (*gpio_reg);
 
-return value ;
+    return value ;
 }
 
 /****************************************************************
@@ -144,8 +150,11 @@ return value ;
  ****************************************************************/
 void
 write_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint8_t write_data){
-
+    pthread_mutex_lock(&gpio_mutex_3);
     uint8_t wr_buf[2];
+
+
+
     char *i2c_device = "/dev/i2c-4";
 
     switch (device_addr)
@@ -162,7 +171,7 @@ write_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint8_t write_data){
     default:
         i2c_device = "/dev/i2c-4";
     }
-//Switches the I2C bus depending on I2C device address
+    //Switches the I2C bus depending on I2C device address
 
 
     if ((fd = open(i2c_device,O_RDWR)) < 0) {
@@ -183,6 +192,7 @@ write_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint8_t write_data){
 
 
     close(fd);
+    pthread_mutex_unlock(&gpio_mutex_3);
 
 }
 /***************************************************************************
@@ -190,16 +200,20 @@ write_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint8_t write_data){
  ***************************************************************************/
 
 uint8_t
-read_ctrl_register(uint8_t device_addr, uint8_t mcp_reg){
-
+read_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint32_t id){
+    pthread_mutex_lock(&gpio_mutex_1);
     uint8_t register_data = 0;
     uint8_t rd_buf[1];
     uint8_t wr_buf[1];
 
+
+
     char *i2c_device = "/dev/i2c-4";
-//Set the i2c Bus 4 or 5 depending on the I2Cchip beeing written
-//Only MATRIX_TO, MATRIX_FROM and DTMF_I2C devices are on I2c-5
-// All the rest is in I2C-4
+    //Set the i2c Bus 4 or 5 depending on the I2Cchip beeing written
+    //Only MATRIX_TO, MATRIX_FROM and DTMF_I2C devices are on I2c-5
+    // All the rest is in I2C-4
+
+
     switch (device_addr)
     {
     case MATRIX_TO:
@@ -217,76 +231,83 @@ read_ctrl_register(uint8_t device_addr, uint8_t mcp_reg){
 
 
     if ((fd = open(i2c_device,O_RDWR)) < 0) {
-        printf("Error gpio.c Line 217: Failed to open I2C Bus \n O_RDWR");
+        printf("Error gpio.c Line 217: Failed to open I2C Bus ID: %d \n O_RDWR", id);
         exit(1);
     }
 
     if (ioctl(fd,I2C_SLAVE,device_addr) < 0) {
-        printf("Error gpio.c Line 222: Failed to set I2C Bus as slave.\n");
+        printf("Error gpio.c Line 222: Failed to set I2C Bus as slave ID: %d\n", id);
         exit(1);
     }
 
+
+
     wr_buf[0] = mcp_reg;
+
     if (write(fd,wr_buf,1) != 1)
-        printf("Error gpio.c Line 228: Failed to write from i2c bus\n");
+        printf("Error gpio.c Line 228: Failed to write from i2c bus ID: %d \n", id);
 
 
     if (read(fd,rd_buf,1) != 1) {
-        printf("Error gpio.c Line 232: Failed to read i2c bus\n");
+        printf("Error gpio.c Line 232: Failed to read i2c bus ID: %d \n", id);
 
     } else {
         register_data = rd_buf[0];
     }
 
     close(fd);
+
     return register_data;
+    pthread_mutex_unlock(&gpio_mutex_1);
+
+
 }
 
 
 void set_connections(uint8_t from, uint8_t to){
 
-//Converts numeric to bit value
+    //Converts numeric to bit value
     uint8_t exch_lines[9] = {0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
 
-  write_ctrl_register(MATRIX_FROM, MCP_OLAT, exch_lines[from]);
-  write_ctrl_register(MATRIX_TO, MCP_OLAT, exch_lines[to]);
+    write_ctrl_register(MATRIX_FROM, MCP_OLAT, exch_lines[from]);
+    write_ctrl_register(MATRIX_TO, MCP_OLAT, exch_lines[to]);
 
 }
 
 void init_gpios(){
 
     int8_t gpio_err_msg [12]={0,0,0,0,0,0,0,0,0,0,0,0};
-   uint8_t i;
+    uint8_t i;
 
     /****************************************************************
      * Initialize RPI I/Os
      ****************************************************************/
 
     //Initialize GPIOs as IN or OUT
-        gpio_err_msg[0] = file_gpio_init(DC_LOOP_INT, "in");
-        gpio_err_msg[1] = file_gpio_init(LOOP_CLOSED_N_1, "in");
-        gpio_err_msg[2] = file_gpio_init(LOOP_CLOSED_N_2, "in");
-        gpio_err_msg[3] = file_gpio_init(LOOP_CLOSED_N_3, "in");
-        gpio_err_msg[4] = file_gpio_init(LOOP_CLOSED_N_4, "in");
-        gpio_err_msg[5] = file_gpio_init(LOOP_CLOSED_N_5, "in");
-        gpio_err_msg[6] = file_gpio_init(LOOP_CLOSED_N_6, "in");
-        gpio_err_msg[7] = file_gpio_init(LOOP_CLOSED_N_7, "in");
-        gpio_err_msg[8] = file_gpio_init(LOOP_CLOSED_N_8, "in");
-        gpio_err_msg[9] = file_gpio_init(DTMF_INT, "in");
-        gpio_err_msg[10] = file_gpio_init(RING_INDICATOR_N, "in");
+    gpio_err_msg[0] = file_gpio_init(DC_LOOP_INT, "in");
+    gpio_err_msg[1] = file_gpio_init(LOOP_CLOSED_N_1, "in");
+    gpio_err_msg[2] = file_gpio_init(LOOP_CLOSED_N_2, "in");
+    gpio_err_msg[3] = file_gpio_init(LOOP_CLOSED_N_3, "in");
+    gpio_err_msg[4] = file_gpio_init(LOOP_CLOSED_N_4, "in");
+    gpio_err_msg[5] = file_gpio_init(LOOP_CLOSED_N_5, "in");
+    gpio_err_msg[6] = file_gpio_init(LOOP_CLOSED_N_6, "in");
+    gpio_err_msg[7] = file_gpio_init(LOOP_CLOSED_N_7, "in");
+    gpio_err_msg[8] = file_gpio_init(LOOP_CLOSED_N_8, "in");
+    gpio_err_msg[9] = file_gpio_init(DTMF_INT, "in");
+    gpio_err_msg[10] = file_gpio_init(RING_INDICATOR_N, "in");
 
-        //Initialize GPIOs with edge trigger
+    //Initialize GPIOs with edge trigger
 
-        gpio_err_msg[11] = set_edge_rising(DC_LOOP_INT);
+    gpio_err_msg[11] = set_edge_rising(DC_LOOP_INT);
 
-        for (i =0; i < 12; i++)
-        {
-            if (gpio_err_msg[i] < 0) {
-                printf("ERROR: Failed to initialize GPIOs as in or out");
-                exit(EXIT_FAILURE);
-            }
-}
-        /****************************************************************
+    for (i =0; i < 12; i++)
+    {
+        if (gpio_err_msg[i] < 0) {
+            printf("ERROR: Failed to initialize GPIOs as in or out");
+            exit(EXIT_FAILURE);
+        }
+    }
+    /****************************************************************
          * Initialize MCP I2C Controller Pins
          ****************************************************************/
 
@@ -299,7 +320,7 @@ void init_gpios(){
     //Set the AC/DC Registers to DC
     write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff); // set to one
     write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00); // set to zero
-// Set the Connect control register to output and off
+    // Set the Connect control register to output and off
     write_ctrl_register(CONNECT_CTRL, MCP_IODIR, 0x00);
     write_ctrl_register(CONNECT_CTRL, MCP_OLAT, 0x00);
     //DTMF_READ set 0-3 as read, 4-7 as write
@@ -347,17 +368,25 @@ hex2notlines(uint8_t hex){
 // Write Single Bit in I2C
 //
 void
-write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value){
+write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value, uint32_t id){
+    pthread_mutex_lock(&gpio_mutex_2);
+
     char rd_buf[0];
     char wr_buf[0];
     uint8_t cur_value = 0;
     uint8_t mask;
 
+
+
     char *i2c_device = "/dev/i2c-4";
-//Set the i2c Bus 4 or 5 depending on the I2Cchip beeing written
-//Only MATRIX_TO, MATRIX_FROM and DTMF_I2C devices are on I2c-5
-// All the rest is in I2C-4
+    //Set the i2c Bus 4 or 5 depending on the I2Cchip beeing written
+    //Only MATRIX_TO, MATRIX_FROM and DTMF_I2C devices are on I2c-5
+    // All the rest is in I2C-4
+
+
+
     switch (device_addr)
+
     {
     case MATRIX_TO:
         i2c_device = "/dev/i2c-5";
@@ -388,7 +417,7 @@ write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value
 
     if (read(fd,rd_buf,1) != 1) {
         /* ERROR HANDLING: i2c transaction failed */
-        printf("Failed to read from the i2c bus.\n");
+        printf("Failed to read from the i2c bus ID:%d\n", id);
     } else {
         cur_value = rd_buf[0];
     }
@@ -406,6 +435,8 @@ write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value
         printf("Failed to write to the i2c bus.\n");
 
     close(fd);
+    pthread_mutex_unlock(&gpio_mutex_2);
+
 }
 
 //Using pseudo interrupts via file system
@@ -425,10 +456,10 @@ int8_t wait_select(uint8_t sec, uint8_t usec, uint8_t gpio, bool timeout)
     tv.tv_usec = usec;
     read(filepath, str, 100);   // clear edge trigger with "read"
     if (timeout == true){
-    retval = select(filepath+1, NULL, NULL, &fd, &tv);
+        retval = select(filepath+1, NULL, NULL, &fd, &tv);
     }
     else {
-    retval = select(filepath+1, NULL, NULL, &fd, NULL);
+        retval = select(filepath+1, NULL, NULL, &fd, NULL);
     }
     //close(filepath);
     FD_CLR(filepath, &fd);
@@ -438,25 +469,28 @@ int8_t wait_select(uint8_t sec, uint8_t usec, uint8_t gpio, bool timeout)
 
 bool
 loop_detected(){
-uint8_t read_loop;
-bool loop_closed = false;
+    uint8_t read_loop;
+    bool loop_closed = false;
 
- read_loop = read_ctrl_register(LOOP_DETECT, MCP_GPIO);
+    read_loop = read_ctrl_register(LOOP_DETECT, MCP_GPIO, 2444);
     if (read_loop < 0xff) {
         loop_closed = true;
     }
     else {
-            loop_closed = false;
-        }
-    return loop_closed;
+        loop_closed = false;
     }
+    return loop_closed;
+}
 
 /****************************************************************
  * Function reads Single GPIO via File System
  ****************************************************************/
 
 int32_t gpio_read (uint32_t gpio)
+
 {
+    pthread_mutex_lock(&gpio_mutex_4);
+
     FILE *fp;
     char str[100];
     int32_t ret;
@@ -472,5 +506,8 @@ int32_t gpio_read (uint32_t gpio)
     fclose(fp);
 
     return ret;
+    pthread_mutex_unlock(&gpio_mutex_4);
+
+
 }
 

@@ -2,6 +2,7 @@
 #include "main.h"
 #include "extern.h"
 #include "gpio.h"
+#include "signals.h"
 
 typedef enum {
     st_ext_idle,
@@ -28,17 +29,22 @@ void main_fsm()
 {
     switch (ext_state) {
     case st_ext_idle:
-        write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 0);
+        write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 0, 4031);
         //sem_init(&sem_signal,0,0);
         printf("EXT IDLE\n");
         if (main_fsm_event.ring_timer_expired == 0){
+
+
+
             ext_state = st_ext_ring;
         }
         break;
 
     case st_ext_ring:
-        //sem_post(&sem_signal);
         printf("EXT RING\n");
+        melody = gb_ring;
+        sem_post(&sem_signal);
+
         if (loop_detected()){
             ext_state = st_ext_accepted;
         }
@@ -53,8 +59,8 @@ void main_fsm()
 
     case st_ext_accepted:
         printf("EXT ACCEPTED\n");
-        //sem_init(&sem_signal,0,0);
-        write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 1);
+        sem_init(&sem_signal,0,0);
+        write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 1, 4057);
 
         if (loop_detected()){
             ext_state = st_ext_accepted;

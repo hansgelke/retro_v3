@@ -93,7 +93,6 @@ void *tf_pwm()
 
     printf("Started pwm threat");
     while(1){
-        //sem_wait(&sem_pwmon); // wait for pwm to be turned on
         for (i_dds = 0; i_dds < 32; ++i_dds) {
       //      pwm_reg_write(PWM_DAT1, (64+(64*sine_array[i_dds])));
             pwm_reg_write(PWM_DAT1, sine_array[i_dds]);
@@ -135,6 +134,7 @@ init_pwm(){
     //pwm_reg_write(PWM_RNG1, 0x9f);
     //pwm_reg_write(PWM_DAT1, 0x37);
 
+    pwm_reg_write(PWM_CTL, 0x81);
 
 }
 
