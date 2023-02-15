@@ -201,7 +201,7 @@ write_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint8_t write_data){
 
 uint8_t
 read_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint32_t id){
-    pthread_mutex_lock(&gpio_mutex_1);
+    //pthread_mutex_lock(&gpio_mutex_1);
     uint8_t register_data = 0;
     uint8_t rd_buf[1];
     uint8_t wr_buf[1];
@@ -258,7 +258,7 @@ read_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint32_t id){
     close(fd);
 
     return register_data;
-    pthread_mutex_unlock(&gpio_mutex_1);
+  //  pthread_mutex_unlock(&gpio_mutex_1);
 
 
 }
@@ -489,7 +489,7 @@ loop_detected(){
 int32_t gpio_read (uint32_t gpio)
 
 {
-    pthread_mutex_lock(&gpio_mutex_4);
+ //   pthread_mutex_lock(&gpio_mutex_4);
 
     FILE *fp;
     char str[100];
@@ -506,7 +506,7 @@ int32_t gpio_read (uint32_t gpio)
     fclose(fp);
 
     return ret;
-    pthread_mutex_unlock(&gpio_mutex_4);
+   // pthread_mutex_unlock(&gpio_mutex_4);
 
 
 }

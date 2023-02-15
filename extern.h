@@ -10,7 +10,14 @@
 #include <gst/gst.h>
 
 
+
 #define MAX_RING (500)
+
+typedef enum {
+    st_ext_idle,
+    st_ext_ring,
+    st_ext_accepted
+} ext_fsm_state_t;
 
 
 void *tf_extern();

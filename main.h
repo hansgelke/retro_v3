@@ -19,13 +19,16 @@
 #include <stdint.h>
 #include <semaphore.h>
 #include <pthread.h>
+#include <string.h>
+#include <stdbool.h>
+
+
 
 
 sem_t sem_signal;
-
+bool test_mode;
 //Function declarations
 
-void *tf_menue();
 
 
 
