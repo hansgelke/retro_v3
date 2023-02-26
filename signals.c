@@ -33,11 +33,6 @@ void *tf_generate_signals()
         sem_wait(&sem_signal);
         sem_post(&sem_signal);//Post for next cycle
 
-
-
-        //pwm0_reg_write(PWM_CTL, 0x0);
-        //write_mcp_bit(MCP_OLAT, CNTRL_REG, AC, 0);
-        //write_mcp_bit(MCP_OLAT, CNTRL_REG, DC, 1);
         g_object_set (G_OBJECT (tone_src1), "volume", 0.4, NULL);
         g_object_set (G_OBJECT (tone_src2), "volume", 0.4, NULL);
         g_object_set (G_OBJECT (tone_src1), "wave", 0, NULL);
@@ -63,17 +58,14 @@ void *tf_generate_signals()
             {gst_element_set_state (tone_pipeline, GST_STATE_NULL);
             }
 
-            //If ringer flag is set, turn on AC for Ringer and PWM
+            //If ringer flag is set, turn on Bridge for AC generation
             if (melody[note_idx].ringer_on) {
-                write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(1));
-              write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(1));
+
                 write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 5071);
             }
 
             else {
                 write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 5077);
-                write_ctrl_register(PHONE_AC, MCP_OLAT, hex2notlines(1));
-                write_ctrl_register(PHONE_DC, MCP_OLAT, hex2lines(1));
 
 
             }

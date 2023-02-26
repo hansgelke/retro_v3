@@ -31,7 +31,7 @@ while(1) {
         next_state = ext_state;
         main_fsm();
         if     (ext_state != next_state){
-            printf("State changed '%x'\n:", ext_state);
+            printf("State changed: '%x'\n", ext_state);
         };
 
 
@@ -62,7 +62,6 @@ void main_fsm()
 
 {
 
-
             switch (ext_state) {
             case st_ext_idle:
                 write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 0, 4031);
@@ -74,12 +73,14 @@ void main_fsm()
 
             case st_ext_ring:
                 melody = gb_ring;
-                sem_post(&sem_signal);
+                write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(1));
+              write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(1));
+              //  sem_post(&sem_signal);
 
-                if (loop_detected()){
-                    ext_state = st_ext_accepted;
-                }
-                else if (ring_timer == 0){
+//                if (mmap_gpio_test(PICK_UP_N)){
+//                    ext_state = st_ext_accepted;
+                //}
+                if (ring_timer == 0){
                     ext_state = st_ext_idle;
                 }
 

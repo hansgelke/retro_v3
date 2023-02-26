@@ -49,6 +49,7 @@
 #define LOOP_CLOSED_N_8 (5)
 #define RING_INDICATOR_N (13)
 #define DTMF_INT (16)
+#define PICK_UP_N (4)
 
 
 
@@ -96,6 +97,9 @@ int8_t file_gpio_init (uint8_t gpio, char *direction);
 uint8_t mmap_gpio_read( uint8_t gpio);
 void mmap_gpio_set( uint8_t gpio, uint8_t value);
 int32_t gpio_read (uint32_t gpio);
+bool mmap_gpio_test(uint8_t gpio);
+void ac_on (bool acon, uint8_t line_no);
+
 
 
 bool loop_detected ();

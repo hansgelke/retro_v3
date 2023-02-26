@@ -38,6 +38,7 @@ test_menue()
     uint32_t pwm0_fif1_reg = 0;
     uint32_t pwm0_rng2_reg = 0;
     uint32_t pwm0_dat2_reg = 0;
+    uint8_t iac = 1;
 
 
     printf("rdiic - Read I2C Device Register\n");
@@ -53,6 +54,8 @@ test_menue()
     printf("extoff - Disconnects external line\n");
     printf("sinus - Generate Sinus Signal and send to a phone\n");
     printf("gbring - Generate GB ring signal and send to phone\n");
+    printf("gbrings - Turn off ringing\n");
+    printf("run - Run Application\n");
     printf("\n");
     printf("\n");
 
@@ -218,7 +221,7 @@ test_menue()
 
         melody = ger_dial;
         sem_post(&sem_signal);
-        write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3296);
+        write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3221);
         write_ctrl_register(MATRIX_FROM, MCP_OLAT, hex2lines(a_arg1));
 
     }
@@ -231,8 +234,19 @@ test_menue()
         }
         sscanf(&line[0], "%x", &a_arg1);
         melody = gb_ring;
+        ac_on(true,a_arg1);
+        write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 3238);
         sem_post(&sem_signal);
     }
+
+    else if (strcmp(line, "gbrings\n") == 0){
+        for (iac=1; iac<=8; iac++){
+            ac_on(false,iac);
+        }
+        write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 3243);
+
+    }
+
     else if (strcmp(line, "run\n") == 0){
         test_mode = false;
         printf("Enter RUN mode\n");

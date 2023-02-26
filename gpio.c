@@ -6,6 +6,8 @@
  * ------------------------------------------------------------------
  */
 #include "gpio.h"
+#include "pwm.h"
+
 
 void *virtual_gpio_base;
 
@@ -145,6 +147,22 @@ uint8_t mmap_gpio_read(uint8_t gpio)
     return value ;
 }
 
+bool mmap_gpio_test(uint8_t gpio)
+{
+    uint32_t value;
+    uint32_t mask;
+    uint32_t *gpio_reg;
+    gpio_reg = (uint32_t *) (virtual_gpio_base + GPIO_LVL0);
+    value = (*gpio_reg);
+    mask = 0x1 << gpio;
+    if (mask && value) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
 /****************************************************************
  * i2c-dev
  ****************************************************************/
@@ -258,7 +276,7 @@ read_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint32_t id){
     close(fd);
 
     return register_data;
-  //  pthread_mutex_unlock(&gpio_mutex_1);
+    //  pthread_mutex_unlock(&gpio_mutex_1);
 
 
 }
@@ -489,7 +507,7 @@ loop_detected(){
 int32_t gpio_read (uint32_t gpio)
 
 {
- //   pthread_mutex_lock(&gpio_mutex_4);
+    //   pthread_mutex_lock(&gpio_mutex_4);
 
     FILE *fp;
     char str[100];
@@ -506,8 +524,20 @@ int32_t gpio_read (uint32_t gpio)
     fclose(fp);
 
     return ret;
-   // pthread_mutex_unlock(&gpio_mutex_4);
+    // pthread_mutex_unlock(&gpio_mutex_4);
 
 
+}
+
+void
+ac_on (bool acon, uint8_t line_no){
+    if (acon == true) {
+        write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(line_no));
+        write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(line_no));
+    }
+    else {
+        write_ctrl_register(PHONE_AC, MCP_OLAT, hex2notlines(line_no));
+        write_ctrl_register(PHONE_DC, MCP_OLAT, hex2lines(line_no));
+    }
 }
 
