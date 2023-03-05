@@ -30,12 +30,12 @@
 #define GPFSELX_OFFSET(pin) (pin / 10 * 0x04)
 #define FSELX_OFFSET(pin) (pin % 10 * 3)
 
-#define GPIO_BASE_ADDR   	   (0xfe200000) // base of GPIO page
+#define GPIO_BASE_ADDR   (0xfe200000) // base of GPIO page
 #define GPIO_FSEL1         (0x00000004) // GPIOFSEL1 offset
 #define GPIO_FSEL2         (0x00000008) // GPIOFSEL1 offset
 #define GPIO_SET0          (0x0000001c) // GPIOSET0 offset
 #define GPIO_CLR0          (0x00000028) //GPIOCLR0 offset
-#define GPIO_LVL0          (0x00000034) //GPIOCLR0 offset
+#define GPIO_LVL0          (0x00000034) //GPIOLVL0 offset
 
 #define DC_LOOP_INT (0x06)
 #define GPIO26 (0x1a)
@@ -50,6 +50,16 @@
 #define RING_INDICATOR_N (13)
 #define DTMF_INT (16)
 #define PICK_UP_N (4)
+#define LOOP_MASK (0x0bc20220)
+#define LINE_1 (0x08000000)
+#define LINE_2 (0x00400000)
+#define LINE_3 (0x00800000)
+#define LINE_4 (0x01000000)
+#define LINE_5 (0x00000020)
+#define LINE_6 (0x02000000)
+#define LINE_7 (0x00020000)
+#define LINE_8 (0x00000020)
+
 
 
 
@@ -85,7 +95,7 @@
 
 
 //Function declarations
-uint8_t mmap_virtual_base();
+int mmap_virtual_base();
 uint8_t read_ctrl_register(uint8_t register_addr, uint8_t device_addr, uint32_t id);
 void write_ctrl_register(uint8_t device_addr, uint8_t register_addr, uint8_t register_data);
 void set_connections(uint8_t from, uint8_t to);
@@ -94,11 +104,13 @@ uint8_t hex2notlines(uint8_t hex);
 void write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value, uint32_t id);
 int8_t wait_select(uint8_t sec, uint8_t usec, uint8_t gpio, bool timeout);
 int8_t file_gpio_init (uint8_t gpio, char *direction);
-uint8_t mmap_gpio_read( uint8_t gpio);
+uint32_t mmap_lvl_read(void);
 void mmap_gpio_set( uint8_t gpio, uint8_t value);
 int32_t gpio_read (uint32_t gpio);
 bool mmap_gpio_test(uint8_t gpio);
 void ac_on (bool acon, uint8_t line_no);
+void set_ext_connect(uint8_t from);
+uint8_t line_requesting();
 
 
 

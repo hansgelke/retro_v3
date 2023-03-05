@@ -14,9 +14,10 @@
 #define MAX_RING (500)
 
 typedef enum {
-    st_ext_idle,
+    st_idle,
     st_ext_ring,
-    st_ext_accepted
+    st_ext_accepted,
+    st_lifted
 } ext_fsm_state_t;
 
 

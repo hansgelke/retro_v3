@@ -39,6 +39,7 @@ test_menue()
     uint32_t pwm0_rng2_reg = 0;
     uint32_t pwm0_dat2_reg = 0;
     uint8_t iac = 1;
+    uint32_t value;
 
 
     printf("rdiic - Read I2C Device Register\n");
@@ -56,6 +57,7 @@ test_menue()
     printf("gbring - Generate GB ring signal and send to phone\n");
     printf("gbrings - Turn off ringing\n");
     printf("run - Run Application\n");
+    printf("gpiord - Read GPIO LVL0 Register\n");
     printf("\n");
     printf("\n");
 
@@ -93,7 +95,7 @@ test_menue()
     }
 
     else if (strcmp(line, "conn\n") == 0){
-        printf("From, To:\n");
+        printf("From, To (Number from 0 to 7)\n");
         fgets(line,100,stdin);
         if (strcmp(line, "x\n") == 0){
             return 0;
@@ -101,6 +103,24 @@ test_menue()
         sscanf(&line[0], "%x %x", &a_arg1, &a_arg2);
         set_connections(a_arg1,a_arg2);
         printf("From Phone:%x To Phone:%x \n", a_arg1, a_arg2);
+    }
+
+    //Write GPIO Register -- NOT TESTED
+    else if (strcmp(line, "gpiowr\n") == 0){
+        printf("GPIO Bit No, Write Value\n");
+        fgets(line,100,stdin);
+        if (strcmp(line, "x\n") == 0){
+            return 0;
+        }
+        sscanf(&line[0], "%x %x", &a_arg1, &a_arg2);
+        mmap_gpio_set(a_arg1, a_arg2);
+    }
+
+    //Read GPIO LVL0 Register
+    else if (strcmp(line, "gpiord\n") == 0){
+        value = mmap_lvl_read();
+        printf("GPIO Bit: 0x%x \n", value);
+
     }
 
     // Write PWM Register
@@ -235,7 +255,6 @@ test_menue()
         sscanf(&line[0], "%x", &a_arg1);
         melody = gb_ring;
         ac_on(true,a_arg1);
-        write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 3238);
         sem_post(&sem_signal);
     }
 
@@ -244,6 +263,7 @@ test_menue()
             ac_on(false,iac);
         }
         write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 3243);
+        sem_init(&sem_signal,0,0);
 
     }
 

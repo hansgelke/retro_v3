@@ -77,9 +77,9 @@ int set_edge_rising(int gpio)
 /****************************************************************
  * mmap virtual base calculation
  ****************************************************************/
-uint8_t mmap_virtual_base()
+int mmap_virtual_base()
 {
-    uint8_t  m_mfd;
+    int  m_mfd;
 
     if ((m_mfd = open("/dev/mem", O_RDWR)) < 0)
     {
@@ -137,25 +137,68 @@ void mmap_gpio_set( uint8_t gpio, uint8_t value)
     *gpio_reg =  (0x1 << gpio);
 }
 
-uint8_t mmap_gpio_read(uint8_t gpio)
+uint32_t
+mmap_lvl_read(void)
 {
-    uint8_t value;
+    uint32_t value;
     uint32_t *gpio_reg;
     gpio_reg = (uint32_t *) (virtual_gpio_base + GPIO_LVL0);
     value = (*gpio_reg);
 
     return value ;
 }
+uint8_t
+line_requesting(){
+uint32_t raw_lvlbits =0xff;
+uint32_t lvlbits =0x00;
+uint8_t line_number;
+
+
+raw_lvlbits = mmap_lvl_read();
+lvlbits = ~raw_lvlbits;
+if ((lvlbits) & LINE_1){
+    line_number = 0x0;
+}
+else if ((lvlbits) & LINE_2){
+    line_number = 0x1;
+}
+else if ((lvlbits) & LINE_3){
+    line_number = 0x2;
+}
+else if ((lvlbits) & LINE_4){
+    line_number = 0x3;
+}
+else if ((lvlbits) & LINE_5){
+    line_number = 0x4;
+}
+else if ((lvlbits) & LINE_6){
+    line_number = 0x5;
+}
+else if ((lvlbits) & LINE_7){
+    line_number = 0x6;
+}
+else if ((lvlbits) & LINE_8){
+    line_number = 0x7;
+}
+else {
+    line_number = 0xff;
+}
+
+    return line_number;
+
+}
 
 bool mmap_gpio_test(uint8_t gpio)
 {
     uint32_t value;
-    uint32_t mask;
-    uint32_t *gpio_reg;
-    gpio_reg = (uint32_t *) (virtual_gpio_base + GPIO_LVL0);
-    value = (*gpio_reg);
-    mask = 0x1 << gpio;
-    if (mask && value) {
+    uint32_t mask = 0x0;
+    //uint32_t setbit = 0x0;
+
+    value = mmap_lvl_read();
+
+    mask = (uint32_t) 0x1 << gpio;
+    value &= mask;
+    if ((value) > 0) {
         return true;
     }
     else {
@@ -219,7 +262,7 @@ write_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint8_t write_data){
 
 uint8_t
 read_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint32_t id){
-    //pthread_mutex_lock(&gpio_mutex_1);
+   // pthread_mutex_lock(&gpio_mutex_1);
     uint8_t register_data = 0;
     uint8_t rd_buf[1];
     uint8_t wr_buf[1];
@@ -276,91 +319,30 @@ read_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint32_t id){
     close(fd);
 
     return register_data;
-    //  pthread_mutex_unlock(&gpio_mutex_1);
+ //     pthread_mutex_unlock(&gpio_mutex_1);
 
 
 }
 
 
-void set_connections(uint8_t from, uint8_t to){
+void
+set_connections(uint8_t from, uint8_t to){
 
     //Converts numeric to bit value
-    uint8_t exch_lines[9] = {0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
+    uint8_t exch_lines[8] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
 
     write_ctrl_register(MATRIX_FROM, MCP_OLAT, exch_lines[from]);
     write_ctrl_register(MATRIX_TO, MCP_OLAT, exch_lines[to]);
 
 }
 
-void init_gpios(){
+void
+set_ext_connect(uint8_t from){
+    //Converts numeric to bit value
+    uint8_t exch_lines[8] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
 
-    int8_t gpio_err_msg [12]={0,0,0,0,0,0,0,0,0,0,0,0};
-    uint8_t i;
-
-    /****************************************************************
-     * Initialize RPI I/Os
-     ****************************************************************/
-
-    //Initialize GPIOs as IN or OUT
-    gpio_err_msg[0] = file_gpio_init(DC_LOOP_INT, "in");
-    gpio_err_msg[1] = file_gpio_init(LOOP_CLOSED_N_1, "in");
-    gpio_err_msg[2] = file_gpio_init(LOOP_CLOSED_N_2, "in");
-    gpio_err_msg[3] = file_gpio_init(LOOP_CLOSED_N_3, "in");
-    gpio_err_msg[4] = file_gpio_init(LOOP_CLOSED_N_4, "in");
-    gpio_err_msg[5] = file_gpio_init(LOOP_CLOSED_N_5, "in");
-    gpio_err_msg[6] = file_gpio_init(LOOP_CLOSED_N_6, "in");
-    gpio_err_msg[7] = file_gpio_init(LOOP_CLOSED_N_7, "in");
-    gpio_err_msg[8] = file_gpio_init(LOOP_CLOSED_N_8, "in");
-    gpio_err_msg[9] = file_gpio_init(DTMF_INT, "in");
-    gpio_err_msg[10] = file_gpio_init(RING_INDICATOR_N, "in");
-
-    //Initialize GPIOs with edge trigger
-
-    gpio_err_msg[11] = set_edge_rising(DC_LOOP_INT);
-
-    for (i =0; i < 12; i++)
-    {
-        if (gpio_err_msg[i] < 0) {
-            printf("ERROR: Failed to initialize GPIOs as in or out");
-            exit(EXIT_FAILURE);
-        }
-    }
-    /****************************************************************
-         * Initialize MCP I2C Controller Pins
-         ****************************************************************/
-
-    //Set Matrix Controllers to Output
-    write_ctrl_register(MATRIX_FROM, MCP_IODIR, 0x00);
-    write_ctrl_register(MATRIX_TO, MCP_IODIR, 0x00);
-    //Set the AC/DC Registers to output
-    write_ctrl_register(PHONE_DC, MCP_IODIR, 0x00);
-    write_ctrl_register(PHONE_AC, MCP_IODIR, 0x00);
-    //Set the AC/DC Registers to DC
-    write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff); // set to one
-    write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00); // set to zero
-    // Set the Connect control register to output and off
-    write_ctrl_register(CONNECT_CTRL, MCP_IODIR, 0x00);
-    write_ctrl_register(CONNECT_CTRL, MCP_OLAT, 0x00);
-    //DTMF_READ set 0-3 as read, 4-7 as write
-    write_ctrl_register(DTMF_READ, MCP_IODIR, 0x0f);
-    /*******************************************************
-    *** LOOP Detect Register
-    *****************************************************/
-
-    //LOOP Detect are input registers
-    write_ctrl_register(LOOP_DETECT, MCP_IODIR, 0xff);
-    // Polarity of the input signal
-    write_ctrl_register(LOOP_DETECT, MCP_IPOL, 0x00);
-    //Enables interrupts
-    write_ctrl_register(LOOP_DETECT, MCP_GPINTEN, 0xff);
-    //controlls rising or falling, not relevant since we
-    //interrupt on both edges
-    write_ctrl_register(LOOP_DETECT, MCP_DEFVAL, 0xff);
-    write_ctrl_register(LOOP_DETECT, MCP_INTCON, 0x00);
-    //Genearte Interrupt on rising and falling edge
-    write_ctrl_register(LOOP_DETECT, MCP_IOCON, 0x02);
-    write_ctrl_register(LOOP_DETECT, MCP_GPPU, 0x00);
-
+    write_ctrl_register(MATRIX_FROM, MCP_OLAT, exch_lines[from]);
+    write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 0, 5091);
 
 }
 
@@ -439,7 +421,6 @@ write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value
     } else {
         cur_value = rd_buf[0];
     }
-
     mask = 0x1 << bit_pos;
     if (value == 1){
         cur_value |= mask;
@@ -541,3 +522,97 @@ ac_on (bool acon, uint8_t line_no){
     }
 }
 
+/****************************************************************
+ * Initialize RPI I/Os
+ ****************************************************************/
+
+void
+init_gpios(){
+
+    int8_t gpio_err_msg [12]={0,0,0,0,0,0,0,0,0,0,0,0};
+    uint8_t i;
+    int8_t ret;
+    uint8_t iac;
+
+
+    //Initialize virtual base address for memory mapped I/O
+    ret = mmap_virtual_base();
+    if (ret != 0) {
+        printf("Error: Failed GPIO mmap: %s\n", strerror(abs(ret)));
+        exit(ret);
+    }
+
+
+
+
+    //Initialize GPIOs as IN or OUT
+    gpio_err_msg[0] = file_gpio_init(DC_LOOP_INT, "in");
+    gpio_err_msg[1] = file_gpio_init(LOOP_CLOSED_N_1, "in");
+    gpio_err_msg[2] = file_gpio_init(LOOP_CLOSED_N_2, "in");
+    gpio_err_msg[3] = file_gpio_init(LOOP_CLOSED_N_3, "in");
+    gpio_err_msg[4] = file_gpio_init(LOOP_CLOSED_N_4, "in");
+    gpio_err_msg[5] = file_gpio_init(LOOP_CLOSED_N_5, "in");
+    gpio_err_msg[6] = file_gpio_init(LOOP_CLOSED_N_6, "in");
+    gpio_err_msg[7] = file_gpio_init(LOOP_CLOSED_N_7, "in");
+    gpio_err_msg[8] = file_gpio_init(LOOP_CLOSED_N_8, "in");
+    gpio_err_msg[9] = file_gpio_init(DTMF_INT, "in");
+    gpio_err_msg[10] = file_gpio_init(RING_INDICATOR_N, "in");
+    gpio_err_msg[10] = file_gpio_init(PICK_UP_N, "in");
+
+    //Initialize GPIOs with edge trigger
+
+    gpio_err_msg[11] = set_edge_rising(DC_LOOP_INT);
+
+    for (i =0; i < 12; i++)
+    {
+        if (gpio_err_msg[i] < 0) {
+            printf("ERROR: Failed to initialize File GPIO as In or out: %d", i);
+            exit(EXIT_FAILURE);
+        }
+    }
+    //Set all lines to DC
+
+    for (iac=1; iac<=8; iac++){
+        ac_on(false,iac);
+    }
+    /****************************************************************
+         * Initialize MCP I2C Controller Pins
+         ****************************************************************/
+
+    //Set Matrix Controllers to Output
+    write_ctrl_register(MATRIX_FROM, MCP_IODIR, 0x00);
+    write_ctrl_register(MATRIX_TO, MCP_IODIR, 0x00);
+    //Set the AC/DC Registers to output
+    write_ctrl_register(PHONE_DC, MCP_IODIR, 0x00);
+    write_ctrl_register(PHONE_AC, MCP_IODIR, 0x00);
+    //Set the AC/DC Registers to DC
+    write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff); // set to one
+    write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00); // set to zero
+    // Set the Connect control register to output and off
+    // Disable External line Audio switches
+    write_ctrl_register(CONNECT_CTRL, MCP_IODIR, 0x00);
+    write_ctrl_register(CONNECT_CTRL, MCP_OLAT, 0x30);
+    //DTMF_READ set 0-3 as read, 4-7 as write
+    write_ctrl_register(DTMF_READ, MCP_IODIR, 0x0f);
+
+
+    /*******************************************************
+    *** LOOP Detect Register
+    *****************************************************/
+
+    //LOOP Detect are input registers
+    write_ctrl_register(LOOP_DETECT, MCP_IODIR, 0xff);
+    // Polarity of the input signal
+    write_ctrl_register(LOOP_DETECT, MCP_IPOL, 0x00);
+    //Enables interrupts
+    write_ctrl_register(LOOP_DETECT, MCP_GPINTEN, 0xff);
+    //controlls rising or falling, not relevant since we
+    //interrupt on both edges
+    write_ctrl_register(LOOP_DETECT, MCP_DEFVAL, 0xff);
+    write_ctrl_register(LOOP_DETECT, MCP_INTCON, 0x00);
+    //Genearte Interrupt on rising and falling edge
+    write_ctrl_register(LOOP_DETECT, MCP_IOCON, 0x02);
+    write_ctrl_register(LOOP_DETECT, MCP_GPPU, 0x00);
+
+
+}

@@ -61,11 +61,15 @@ void *tf_generate_signals()
             //If ringer flag is set, turn on Bridge for AC generation
             if (melody[note_idx].ringer_on) {
 
-                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 5071);
+                //write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 5071);
+                pwm_reg_write(PWM_CTL, 0x81);
+
             }
 
             else {
-                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 5077);
+                //write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 5077);
+                pwm_reg_write(PWM_CTL, 0x00);
+
 
 
             }

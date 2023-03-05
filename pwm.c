@@ -110,7 +110,7 @@ init_pwm(){
     int ret;
     ret =mmap_pwm();
     if (ret != 0) {
-        printf("Error: Failed to initialize PWM: %s\n", strerror(abs(ret)));
+        printf("Error: Failed PWM mmap: %s\n", strerror(abs(ret)));
         exit(ret);
     }
     pwm_reg_write(PWM_CTL, 0x00);
