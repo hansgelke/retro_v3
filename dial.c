@@ -1,6 +1,13 @@
 #include "dial.h"
 #include "gpio.h"
+#include "extern.h"
 
+//The followig are defined in extern.c
+extern pthread_mutex_t dial_mutex ;
+extern pthread_cond_t cond_dial ;
+extern pthread_cond_t cond_dialcomplete ;
+
+extern uint8_t dial_status;
 
 void *tf_rotary()
 {
@@ -19,10 +26,19 @@ void *tf_rotary()
 
 
     while(1){ //loop and wait for interrupts
-      //  loop_interrupt = wait_select(tv_sec, tv_usec, DC_LOOP_INT, timeout);
-
+        //loop only if semaphore is set
+//        pthread_mutex_lock(&dial_mutex);
+//        pthread_cond_wait(&cond_dial, &dial_mutex);
+//        pthread_mutex_unlock(&dial_mutex);
         switch (rotary_state) {
 
+        /************************************************************************
+        *                    ROTARY IDLE
+        ***********************************************************************/
+        //Wait until a DC_LOOP_INT occured (rising edgeof MCP Interrupt line)
+        // A timeout means the user blocks by leaving receiver of hook(not yet implemented)
+        // loop_int > 0 load first pulse into number_dialed_accum then go to hangup
+        // In hangup it is checked, if another pulse comes
         case st_rotary_idle:
             //Arm interrupt without currently no timeout for first pulse
             timeout = false;
@@ -36,15 +52,23 @@ void *tf_rotary()
                 rotary_state = st_timer_hangup;
             }
             else if (loop_interrupt == 0) {
+
                 rotary_state = st_rotary_idle;
-                dial_error = dial_no_dial;
+                dial_status = stat_dial_timeout;
             }
             else {
                 rotary_state = st_rotary_idle;}
             break;
+            /************************************************************************
+*                     TIMER HANGUP
+***********************************************************************/
+
 
         case st_timer_hangup:
-            //Arm interrupt with timeout. A timeout means user hangup instead of dialing.
+            //Enable interrupt with timeout. A timeout means user hangup instead of dialing.
+            // wait_select return: -1 Failure, 0 = timeout, 0> success
+            // In st_dialcomplete the number is accumulated, or if no more pulses come, a completion
+            // of the dial sequence is entered
             tv_sec = 1;
             tv_usec = 000000;
             timeout = true;
@@ -57,7 +81,8 @@ void *tf_rotary()
             }
             // Loop was open to long, origin hang up.
             else if (loop_interrupt == 0) {
-                dial_error = hangup_error;
+                dial_status = stat_hangup;
+                pthread_cond_signal(&cond_dialcomplete);
                 rotary_state = st_rotary_idle;
             }
             // return code ff error, post semaphore for next ring cycle
@@ -66,6 +91,10 @@ void *tf_rotary()
                 rotary_state = st_timer_hangup;
             }
             break;
+
+            /************************************************************************
+            *                   DIAL COMPLETE
+            ***********************************************************************/
 
         case st_timer_dialcompl:
             //Arm interrupt with timeout. A timeout means, there are no more dial pulses
@@ -86,7 +115,9 @@ void *tf_rotary()
             else if (loop_interrupt == 0) {
 
                 number_dialed = number_dialed_accum;
-                dial_error = dial_complete;
+                dial_status = dial_complete;
+                //Signal main FSM that the number is complete now
+                pthread_cond_signal(&cond_dialcomplete);
                 rotary_state = st_rotary_idle;
 
             }

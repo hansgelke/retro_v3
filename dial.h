@@ -14,17 +14,18 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <gst/gst.h>
 
-#define loop_high_error (0xfc)
-#define loop_low_error (0xfb)
-#define hangup_error (0xfd)
-#define dial_no_dial (0xfa)
-#define dial_complete (0x00)
 
-uint8_t dial_error;
+
+#define stat_extline (0x01)
+#define stat_dial_timeout (0x02)
+#define stat_hangup (0x03)
+#define dial_complete (0x04)
+
 uint8_t number_dialed;
 uint8_t number_dialed_accum;
 uint8_t trigger;
@@ -35,5 +36,6 @@ typedef enum {
     st_timer_hangup,
     st_timer_dialcompl
 } rotary_fsm_t;
+
 
 void *tf_rotary();

@@ -12,12 +12,23 @@
 
 
 #define MAX_RING (500)
+#define stat_dial_complete (0x01)
+#define stat_dial_timeout (0x02)
+#define stat_hangup (0x03)
+
+sem_t sem_dial;
+sem_t sem_dial_complete;
 
 typedef enum {
     st_idle,
     st_ext_ring,
     st_ext_accepted,
-    st_lifted
+    st_offhook,
+    st_noerror,
+    st_second_number,
+    st_outsideline,
+    st_no_dial,
+    st_hang_up
 } ext_fsm_state_t;
 
 
