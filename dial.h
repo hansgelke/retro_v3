@@ -29,6 +29,7 @@
 uint8_t number_dialed;
 uint8_t number_dialed_accum;
 uint8_t trigger;
+bool dial_elapsed;
 
 
 typedef enum {
@@ -37,5 +38,6 @@ typedef enum {
     st_timer_dialcompl
 } rotary_fsm_t;
 
+rotary_fsm_t rotary_state;
 
 void *tf_rotary();

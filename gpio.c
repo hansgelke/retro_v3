@@ -342,7 +342,7 @@ set_ext_connect(uint8_t from){
     uint8_t exch_lines[8] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
 
     write_ctrl_register(MATRIX_FROM, MCP_OLAT, exch_lines[from]);
-    write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 0, 5091);
+    write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 1, 5345);
 
 }
 
@@ -582,6 +582,9 @@ init_gpios(){
     //Set Matrix Controllers to Output
     write_ctrl_register(MATRIX_FROM, MCP_IODIR, 0x00);
     write_ctrl_register(MATRIX_TO, MCP_IODIR, 0x00);
+    //Set Matrix Controllers all FETs to off (high active)
+    write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00);
+    write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00);
     //Set the AC/DC Registers to output
     write_ctrl_register(PHONE_DC, MCP_IODIR, 0x00);
     write_ctrl_register(PHONE_AC, MCP_IODIR, 0x00);
@@ -591,9 +594,13 @@ init_gpios(){
     // Set the Connect control register to output and off
     // Disable External line Audio switches
     write_ctrl_register(CONNECT_CTRL, MCP_IODIR, 0x00);
-    write_ctrl_register(CONNECT_CTRL, MCP_OLAT, 0x30);
+    write_ctrl_register(CONNECT_CTRL, MCP_OLAT, 0x00);
     //DTMF_READ set 0-3 as read, 4-7 as write
     write_ctrl_register(DTMF_READ, MCP_IODIR, 0x0f);
+    //Set the signal_a_en and signal_b_en FETs to off(high active)
+    write_ctrl_register(DTMF_READ, MCP_OLAT, 0x00);
+   //pwm off
+    write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 3236);
 
 
     /*******************************************************

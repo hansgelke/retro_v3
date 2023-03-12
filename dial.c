@@ -9,6 +9,7 @@ extern pthread_cond_t cond_dialcomplete ;
 
 extern uint8_t dial_status;
 
+
 void *tf_rotary()
 {
 
@@ -16,7 +17,7 @@ void *tf_rotary()
     para_rotary.sched_priority = 40;
     sched_setscheduler(0,SCHED_RR, &para_rotary);
 
-    static rotary_fsm_t rotary_state = st_rotary_idle;
+    //static rotary_fsm_t rotary_state = st_rotary_idle;
     static uint8_t loop_interrupt = 0;
     static uint32_t tv_sec = 0;
     static uint32_t tv_usec = 0;
@@ -82,7 +83,6 @@ void *tf_rotary()
             // Loop was open to long, origin hang up.
             else if (loop_interrupt == 0) {
                 dial_status = stat_hangup;
-                pthread_cond_signal(&cond_dialcomplete);
                 rotary_state = st_rotary_idle;
             }
             // return code ff error, post semaphore for next ring cycle
@@ -117,8 +117,8 @@ void *tf_rotary()
                 number_dialed = number_dialed_accum;
                 dial_status = dial_complete;
                 //Signal main FSM that the number is complete now
-                pthread_cond_signal(&cond_dialcomplete);
                 rotary_state = st_rotary_idle;
+                dial_elapsed = true;
 
             }
             // else continue waiting for loop interrupt

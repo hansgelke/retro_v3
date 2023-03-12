@@ -231,7 +231,7 @@ test_menue()
     }
 
     else if (strcmp(line, "sinus\n") == 0){
-        printf("Send Tone to Lines (1-8):");
+        printf("Send Tone to Lines (0-7):");
         fgets(line,100,stdin);
         if (strcmp(line, "x\n") == 0){
             return 0;
@@ -242,8 +242,10 @@ test_menue()
         melody = ger_dial;
         sem_post(&sem_signal);
         write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3221);
-        write_ctrl_register(MATRIX_FROM, MCP_OLAT, hex2lines(a_arg1));
-
+        //write_ctrl_register(MATRIX_FROM, MCP_OLAT, hex2lines(a_arg1));
+        //turn off all FETs before turning on specific channel
+        write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00);
+        write_mcp_bit(MATRIX_FROM, MCP_OLAT, a_arg1, 1, 3221);
     }
 
     else if (strcmp(line, "gbring\n") == 0){

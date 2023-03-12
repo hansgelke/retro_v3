@@ -12,11 +12,14 @@ pthread_cond_t cond_dialcomplete = PTHREAD_COND_INITIALIZER;
 extern uint8_t number_dialed;
 
 uint8_t first_num;
+uint8_t second_num;
+uint8_t line_number;
+
+
 ext_fsm_state_t next_state;
 ext_fsm_state_t ext_state = st_idle ;
 
 uint32_t ring_timer = 0;
-uint8_t requesting_line = 0x0;
 uint8_t dial_status = 0;
 uint8_t dial_status_switch = 0;
 
@@ -40,7 +43,6 @@ void *tf_main_fsm()
 
             ext_timer();
             next_state = ext_state;
-            requesting_line = line_requesting();
             main_fsm();
             if     (ext_state != next_state){
                 printf("State changed: '%x'\n", ext_state);
@@ -79,19 +81,21 @@ void main_fsm()
 
     switch (ext_state) {
     case st_idle:
+        line_number = line_requesting();
+        //>>>>> GOTO st_ext_ring
         if (ring_timer > 0){
-            //>>>>>>>> Go TO EXT_RING  >>>>>
-
             melody = gb_ring;
             ac_on(true,1);
             sem_post(&sem_signal);
             write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 5071);
             ext_state = st_ext_ring;
         }
-        else if (requesting_line != 0xff) {
-            //>>>>>>>> Go TO LIFTED  >>>>>>
-
-
+        else if (line_requesting() != 0xff) {
+            // >>>>> GOTO st_offhook
+            melody = us_dial;
+            sem_post(&sem_signal);
+            write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3097);
+            write_mcp_bit(MATRIX_FROM, MCP_OLAT, line_number, 1, 3098);
 
 
             ext_state = st_offhook;
@@ -157,84 +161,128 @@ void main_fsm()
         // Generate dial signal
         melody = ger_dial;
         sem_post(&sem_signal);
+        //if receiver was hooked up (0xff) go to idle
+        // The rotary state must also be idle, because dial pulses would
+        // cause idle state otherwise
+        // >>>>> GOTO st_idle
+        if ((line_requesting() == 0xff) && (rotary_state == st_rotary_idle)){
+            sem_init(&sem_signal,0,0);
+            ac_on(false,1);
+            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 5071);
+            ext_state = st_idle;
+        }
+     //wait until rotary is elapsed
+         else if (dial_elapsed) {
 
-        pthread_cond_signal(&cond_dial);
-        pthread_cond_wait(&cond_dialcomplete, &dial_mutex);
-        first_num = number_dialed;
-        dial_status_switch = dial_status;
-        pthread_mutex_unlock(&dial_mutex);
-
-        // dial.c generates status codes, which are evaluated here
-
-        switch (dial_status_switch){
-
-        /***********************Evaluate returned Dial Status**************************************/
-
-        case stat_dial_complete:
-            //If a zero was dialed to get an outside line (10 pulses)
-            if (first_num == 10){
-                //Turn Dial Tone off
-                sem_init(&sem_signal,0,0);
-                gst_element_set_state (tone_pipeline, GST_STATE_NULL);
-                ext_state = st_outsideline;
+                first_num = number_dialed;
+                dial_status_switch = dial_status;
+                dial_elapsed = false;
+                if(first_num == 0x10){
+                    ext_state = st_outsideline;
+                }
+                else {
+                    ext_state = st_second_number;
+                }
             }
             else {
-                //avoids lockup situation main_fsm sent cond signal and waits for dial complete
-                //and dial_fsm is waiting for cond_dial
-                usleep(500);
-                //remove semaphore to stop dial tone
-                sem_init(&sem_signal,0,0);
-                gst_element_set_state (tone_pipeline, GST_STATE_NULL);
-                ext_state = st_second_number;
+                ext_state = st_offhook;
             }
-            break;
 
 
-            //        case stat_dial_timeout:
-            //            //Timeout if dial is discontinued
-            //            sem_init(&sem_signal,0,0);
-            //            gst_element_set_state (tone_pipeline, GST_STATE_NULL);
-            //            ext_state = st_no_dial;
+        break;
 
-            //            break;
+        /******************************************************************************
+        *                       State Second Number
+        ******************************************************************************/
+
+    case st_second_number:
+        if (dial_elapsed) {
+            second_num = number_dialed;
+            dial_status_switch = dial_status;
+            dial_elapsed = false;
+            //>>>>> GOTO st_int_ring
+            melody = gb_ring;
+            ac_on(true,second_num);
+            sem_post(&sem_signal);
+            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 5071);
+            ext_state = st_int_ring;
+        }
+        else {
+            ext_state = st_second_number;
+        }
 
 
 
-        case stat_hangup:
-            //someone hangs up right after dialing
-            // Not implemented, maybe not necessary works anyway
-            sem_init(&sem_signal,0,0);
-            gst_element_set_state (tone_pipeline, GST_STATE_NULL);
-            ext_state = st_hang_up;
 
-            break;
-
-            /******************************************************************************
+        /******************************************************************************
             *                       State OUTSIDE LINE
            ******************************************************************************/
 
-        case st_outsideline:
+    case st_outsideline:
 
-
-            break;
-            /***************************************************/
-            //                      STATE HANG UP
-            /****************************************************/
-        case st_hang_up:
-
-
-            usleep(1000);
-            ext_state = st_idle;
-            break;
-
-
-        }
 
         break;
+        /***************************************************/
+        //                      STATE HANG UP
+        /****************************************************/
+    case st_hang_up:
+
+
+        usleep(1000);
+        ext_state = st_idle;
+        break;
+
+        /***************************************************/
+        //                      STATE INTERN RING
+        /****************************************************/
+
+
+      case st_int_ring:
+        if (mmap_gpio_test(PICK_UP_N) == true){
+            sem_init(&sem_signal,0,0);
+            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 5071);
+            ac_on(false,second_num);
+
+            ext_state = st_int_established;
+
+        }
+        else if (line_requesting() == 0xff)
+
+        ext_state = st_idle;
+
+       else {
+            ext_state = st_int_ring;
+        }
+        break;
+
+        /***************************************************/
+        //                      STATE HANG UP
+        /****************************************************/
+
+    case st_int_established:
+        //if all participants are leaving call go to idle
+        if (line_requesting() == 0xff){
+
+            //>>>>>>>>>>  GO TO st_idle  >>>>>>>>>>>>>>>>>>>>
+
+            ext_state = st_idle;
+        }
+        else {
+            ext_state = st_int_established;
+
+        }
+        break;
+
+        /***************************************************/
+        //                      SWITCH DEFAULT STATE
+        /****************************************************/
+
+    default:
+        ext_state = st_idle;
+
     }
-
-
 }
+
 
 
 
