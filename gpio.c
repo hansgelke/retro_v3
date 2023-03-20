@@ -75,6 +75,26 @@ int set_edge_rising(int gpio)
 }
 
 /****************************************************************
+ set_edge_both()
+ ****************************************************************/
+
+int set_edge_both(int gpio)
+{
+
+    FILE *fp;
+    char str[100];
+    sprintf(str,"/sys/class/gpio/gpio%d/edge",gpio);
+    fp = fopen(str,"w");
+    if(fp== NULL){
+        printf("Error opening file\n");
+        return -1;
+    }
+    fprintf(fp,"both");
+    fclose(fp);
+    return 0;
+}
+
+/****************************************************************
  * mmap virtual base calculation
  ****************************************************************/
 int mmap_virtual_base()
@@ -147,6 +167,8 @@ mmap_lvl_read(void)
 
     return value ;
 }
+
+
 uint8_t
 line_requesting(){
 uint32_t raw_lvlbits =0xff;
@@ -522,6 +544,14 @@ ac_on (bool acon, uint8_t line_no){
     }
 }
 
+void
+return_to_idle(){
+    write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00);
+    write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00);
+    write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00);
+    write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff);
+}
+
 /****************************************************************
  * Initialize RPI I/Os
  ****************************************************************/
@@ -529,7 +559,7 @@ ac_on (bool acon, uint8_t line_no){
 void
 init_gpios(){
 
-    int8_t gpio_err_msg [12]={0,0,0,0,0,0,0,0,0,0,0,0};
+    int8_t gpio_err_msg [21];
     uint8_t i;
     int8_t ret;
     uint8_t iac;
@@ -557,13 +587,23 @@ init_gpios(){
     gpio_err_msg[8] = file_gpio_init(LOOP_CLOSED_N_8, "in");
     gpio_err_msg[9] = file_gpio_init(DTMF_INT, "in");
     gpio_err_msg[10] = file_gpio_init(RING_INDICATOR_N, "in");
-    gpio_err_msg[10] = file_gpio_init(PICK_UP_N, "in");
+    gpio_err_msg[20] = file_gpio_init(PICK_UP_N, "in");
 
     //Initialize GPIOs with edge trigger
 
     gpio_err_msg[11] = set_edge_rising(DC_LOOP_INT);
+    gpio_err_msg[12] = set_edge_both(LOOP_CLOSED_N_1);
+    gpio_err_msg[13] = set_edge_both(LOOP_CLOSED_N_2);
+    gpio_err_msg[14] = set_edge_both(LOOP_CLOSED_N_3);
+    gpio_err_msg[15] = set_edge_both(LOOP_CLOSED_N_4);
+    gpio_err_msg[16] = set_edge_both(LOOP_CLOSED_N_5);
+    gpio_err_msg[17] = set_edge_both(LOOP_CLOSED_N_6);
+    gpio_err_msg[18] = set_edge_both(LOOP_CLOSED_N_7);
+    gpio_err_msg[19] = set_edge_both(LOOP_CLOSED_N_8);
 
-    for (i =0; i < 12; i++)
+
+
+    for (i =0; i < 20; i++)
     {
         if (gpio_err_msg[i] < 0) {
             printf("ERROR: Failed to initialize File GPIO as In or out: %d", i);

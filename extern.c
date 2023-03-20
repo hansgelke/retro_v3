@@ -75,6 +75,7 @@ void ext_timer()
 void main_fsm()
 
 {
+    //uint8_t iac;
     /******************************************************************************
     *                       State IDLE
     ******************************************************************************/
@@ -94,10 +95,13 @@ void main_fsm()
             // >>>>> GOTO st_offhook
             melody = us_dial;
             sem_post(&sem_signal);
+            //set matrix to output dial tone
             write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3097);
             write_mcp_bit(MATRIX_FROM, MCP_OLAT, line_number, 1, 3098);
-
-
+            pthread_mutex_lock(&dial_mutex);
+            line_pointer = line_requesting();
+            pthread_cond_signal(&cond_dial);
+            pthread_mutex_unlock(&dial_mutex);
             ext_state = st_offhook;
         }
 
@@ -146,6 +150,7 @@ void main_fsm()
             //If loop is opened, hang up external line
             //>>>>>>>>>>  GO TO IDLE  >>>>>>>>>>>>>>>>>>>>
             write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 0, 4057);
+            return_to_idle();
             ext_state = st_idle;
         }
         else {
@@ -158,60 +163,67 @@ void main_fsm()
         *                       State OFF HOOK
         ******************************************************************************/
     case st_offhook:
-        // Generate dial signal
-        melody = ger_dial;
-        sem_post(&sem_signal);
-        //if receiver was hooked up (0xff) go to idle
-        // The rotary state must also be idle, because dial pulses would
-        // cause idle state otherwise
-        // >>>>> GOTO st_idle
-        if ((line_requesting() == 0xff) && (rotary_state == st_rotary_idle)){
-            sem_init(&sem_signal,0,0);
-            ac_on(false,1);
-            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 5071);
-            ext_state = st_idle;
-        }
-     //wait until rotary is elapsed
-         else if (dial_elapsed) {
 
-                first_num = number_dialed;
-                dial_status_switch = dial_status;
-                dial_elapsed = false;
-                if(first_num == 0x10){
-                    ext_state = st_outsideline;
-                }
-                else {
-                    ext_state = st_second_number;
-                }
+        pthread_mutex_lock(&dial_mutex);
+        pthread_cond_wait(&cond_dialcomplete, &dial_mutex);
+        pthread_mutex_unlock(&dial_mutex);
+
+        first_num = number_dialed;
+        dial_status_switch = dial_status;
+
+        switch (dial_status_switch) {
+        case stat_dial_complete:
+
+
+            if(first_num == 0x10){
+                ext_state = st_outsideline;
             }
             else {
-                ext_state = st_offhook;
+                //>>>>GOTO st_second_number
+                //Turn Tones off
+
+                sem_init(&sem_signal,0,0);
+                ext_state = st_second_number;
+
+                pthread_mutex_lock(&dial_mutex);
+                pthread_cond_signal(&cond_dial);
+                pthread_mutex_unlock(&dial_mutex);
             }
+            break;
+
+        case stat_nodial:
+            return_to_idle();
+                        ext_state = st_idle;
+
+            break;
+
+        case stat_hangup:
+            return_to_idle();
+
+            ext_state = st_idle;
+
+            break;
 
 
-        break;
+        }
 
         /******************************************************************************
         *                       State Second Number
         ******************************************************************************/
 
     case st_second_number:
-        if (dial_elapsed) {
-            second_num = number_dialed;
-            dial_status_switch = dial_status;
-            dial_elapsed = false;
-            //>>>>> GOTO st_int_ring
-            melody = gb_ring;
-            ac_on(true,second_num);
-            sem_post(&sem_signal);
-            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 5071);
-            ext_state = st_int_ring;
-        }
-        else {
-            ext_state = st_second_number;
-        }
+        pthread_mutex_lock(&dial_mutex);
+        pthread_cond_wait(&cond_dialcomplete, &dial_mutex);
+        pthread_mutex_unlock(&dial_mutex);
 
-
+        second_num = number_dialed;
+        dial_status_switch = dial_status;
+        //>>>>> GOTO st_int_ring
+        melody = gb_ring;
+        ac_on(true,second_num);
+        sem_post(&sem_signal);
+        write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 5071);
+        ext_state = st_int_ring;
 
 
         /******************************************************************************
@@ -229,6 +241,7 @@ void main_fsm()
 
 
         usleep(1000);
+        return_to_idle();
         ext_state = st_idle;
         break;
 
@@ -237,20 +250,27 @@ void main_fsm()
         /****************************************************/
 
 
-      case st_int_ring:
+    case st_int_ring:
         if (mmap_gpio_test(PICK_UP_N) == true){
+            //>>>> GOTO st_int_established
             sem_init(&sem_signal,0,0);
             write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 5071);
-            ac_on(false,second_num);
-
+            //Turn all lines back to DC mode
+            write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00);
+            write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff);
             ext_state = st_int_established;
 
         }
-        else if (line_requesting() == 0xff)
+        else if (line_requesting() == 0xff){
+            //>>>> GOTO st_idle
 
-        ext_state = st_idle;
-
-       else {
+            sem_init(&sem_signal,0,0);
+            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 5071);
+            //Turn all lines back to DC mode
+            return_to_idle();
+            ext_state = st_idle;
+        }
+        else {
             ext_state = st_int_ring;
         }
         break;
@@ -265,6 +285,7 @@ void main_fsm()
 
             //>>>>>>>>>>  GO TO st_idle  >>>>>>>>>>>>>>>>>>>>
 
+            return_to_idle();
             ext_state = st_idle;
         }
         else {
@@ -278,6 +299,8 @@ void main_fsm()
         /****************************************************/
 
     default:
+
+        return_to_idle();
         ext_state = st_idle;
 
     }

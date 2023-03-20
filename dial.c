@@ -8,6 +8,8 @@ extern pthread_cond_t cond_dial ;
 extern pthread_cond_t cond_dialcomplete ;
 
 extern uint8_t dial_status;
+uint8_t line2gpio[8] = {27, 22, 23, 24, 9, 25, 17, 5};
+uint8_t gpio_port;
 
 
 void *tf_rotary()
@@ -22,15 +24,12 @@ void *tf_rotary()
     static uint32_t tv_sec = 0;
     static uint32_t tv_usec = 0;
     static bool timeout = false;
-    //clear any interrupt
-    trigger = read_ctrl_register(LOOP_DETECT, MCP_INTCAP, 118);
+
 
 
     while(1){ //loop and wait for interrupts
         //loop only if semaphore is set
-//        pthread_mutex_lock(&dial_mutex);
-//        pthread_cond_wait(&cond_dial, &dial_mutex);
-//        pthread_mutex_unlock(&dial_mutex);
+
         switch (rotary_state) {
 
         /************************************************************************
@@ -42,89 +41,105 @@ void *tf_rotary()
         // In hangup it is checked, if another pulse comes
         case st_rotary_idle:
             //Arm interrupt without currently no timeout for first pulse
+
+
+            pthread_mutex_lock(&dial_mutex);
+            pthread_cond_wait(&cond_dial, &dial_mutex);
+            pthread_mutex_unlock(&dial_mutex);
+
+
             timeout = false;
-            loop_interrupt = wait_select(tv_sec, tv_usec, DC_LOOP_INT, timeout);
-            //Clear MCP chip interrupt line
-            trigger = read_ctrl_register(LOOP_DETECT, MCP_INTCAP, 1031);
-            if (loop_interrupt > 0) {
+            loop_interrupt = wait_select(tv_sec, tv_usec, line2gpio[line_pointer], timeout);
+
+            //The interrupt was caused by hangup the receiver without dialing
+            if (line_requesting() == 0xff){
+                pthread_cond_signal(&cond_dialcomplete);
+                dial_status = stat_hangup;
+                rotary_state = st_rotary_idle;
+            }
+
+            else if (loop_interrupt > 0) {
                 //Change on the loop_int line occured - switch to check timer_hangup, needs timeout
                 number_dialed_accum = 1;
-
-                rotary_state = st_timer_hangup;
+                dial_status = stat_open;
+                rotary_state = st_loop_open;
             }
             else if (loop_interrupt == 0) {
-
+                dial_status = stat_nodial;
+                pthread_cond_signal(&cond_dialcomplete);
                 rotary_state = st_rotary_idle;
-                dial_status = stat_dial_timeout;
             }
             else {
                 rotary_state = st_rotary_idle;}
             break;
-            /************************************************************************
-*                     TIMER HANGUP
+
+/************************************************************************
+*                     LOOP OPEN
 ***********************************************************************/
 
 
-        case st_timer_hangup:
+        case st_loop_open:
             //Enable interrupt with timeout. A timeout means user hangup instead of dialing.
             // wait_select return: -1 Failure, 0 = timeout, 0> success
-            // In st_dialcomplete the number is accumulated, or if no more pulses come, a completion
+            // In st_loop_closed the number is accumulated, or if no more pulses come, a completion
             // of the dial sequence is entered
             tv_sec = 1;
             tv_usec = 000000;
             timeout = true;
-            loop_interrupt = wait_select(tv_sec, tv_usec, DC_LOOP_INT, timeout);
-            //Clear MCP chip interrupt line
-            trigger = read_ctrl_register(LOOP_DETECT, MCP_INTCAP, 1053);
+            loop_interrupt = wait_select(tv_sec, tv_usec, line2gpio[line_pointer], timeout);
+
             // if interrupt occured, wait in dialcompl until no more pulses come
             if (loop_interrupt > 0) {
-                rotary_state = st_timer_dialcompl;
+                rotary_state = st_loop_closed;
             }
             // Loop was open to long, origin hang up.
             else if (loop_interrupt == 0) {
                 dial_status = stat_hangup;
+                pthread_cond_signal(&cond_dialcomplete);
                 rotary_state = st_rotary_idle;
             }
             // return code ff error, post semaphore for next ring cycle
 
             else {
-                rotary_state = st_timer_hangup;
+                rotary_state = st_loop_open;
             }
             break;
 
             /************************************************************************
-            *                   DIAL COMPLETE
+            *                   LOOP CLOSED
             ***********************************************************************/
 
-        case st_timer_dialcompl:
+        case st_loop_closed:
             //Arm interrupt with timeout. A timeout means, there are no more dial pulses
             //dialing is complete
             tv_sec = 1;
             tv_usec = 500000;
             timeout = true;
-            loop_interrupt = wait_select(tv_sec, tv_usec, DC_LOOP_INT, timeout);
-            //Clear MCP chip interrupt line
-            trigger = read_ctrl_register(LOOP_DETECT, MCP_INTCAP, 1078);
+            loop_interrupt = wait_select(tv_sec, tv_usec, line2gpio[line_pointer], timeout);
+
 
             if (loop_interrupt > 0) {
                 number_dialed_accum = number_dialed_accum + 1;
-                rotary_state = st_timer_hangup;
+                rotary_state = st_loop_open;
             }
 
             //Timeout no more dial pulses
             else if (loop_interrupt == 0) {
 
+                //>>>>>>>> GOTO st_rotary_idle
+
                 number_dialed = number_dialed_accum;
-                dial_status = dial_complete;
+                dial_status = stat_dial_complete;
                 //Signal main FSM that the number is complete now
+                pthread_cond_signal(&cond_dialcomplete);
+
                 rotary_state = st_rotary_idle;
-                dial_elapsed = true;
 
             }
             // else continue waiting for loop interrupt
 
             else {
-                rotary_state = st_timer_dialcompl;
+                rotary_state = st_loop_closed;
             }
 
             break;

@@ -22,7 +22,6 @@
 
 pthread_mutex_t lock_i2c = PTHREAD_MUTEX_INITIALIZER;
 
-
 int
 test_menue()
 {
@@ -268,12 +267,6 @@ test_menue()
         sem_init(&sem_signal,0,0);
 
     }
-
-    else if (strcmp(line, "run\n") == 0){
-        test_mode = false;
-        printf("Enter RUN mode\n");
-    }
-
 
 
     else {

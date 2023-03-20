@@ -48,9 +48,13 @@ void *virtual_gpio_base;
 
 int main(void) {
 
+    //To get test menues, set test_mode true
+    test_mode = false;
     init_gpios();
     init_pwm();
-    test_mode = true;
+
+
+
 
     /************************************************************
      *************** Initialize Tasks ***************************

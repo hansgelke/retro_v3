@@ -22,22 +22,25 @@
 
 
 #define stat_extline (0x01)
-#define stat_dial_timeout (0x02)
+#define stat_nodial (0x02)
 #define stat_hangup (0x03)
-#define dial_complete (0x04)
+#define stat_open (0x04)
+#define stat_dial_complete (0x05)
 
 uint8_t number_dialed;
 uint8_t number_dialed_accum;
-uint8_t trigger;
-bool dial_elapsed;
+uint8_t line_pointer;
+
 
 
 typedef enum {
     st_rotary_idle,
-    st_timer_hangup,
-    st_timer_dialcompl
+    st_loop_open,
+    st_loop_closed
 } rotary_fsm_t;
 
 rotary_fsm_t rotary_state;
+
+//static uint8_t line2gpio[8] = {27, 22, 23, 24, 9, 25, 17, 5};
 
 void *tf_rotary();

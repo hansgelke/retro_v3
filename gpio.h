@@ -111,6 +111,7 @@ bool mmap_gpio_test(uint8_t gpio);
 void ac_on (bool acon, uint8_t line_no);
 void set_ext_connect(uint8_t from);
 uint8_t line_requesting();
+void return_to_idle();
 
 
 
