@@ -15,6 +15,8 @@
 
 sem_t sem_dial;
 sem_t sem_dial_complete;
+uint8_t origin_number;
+
 
 
 typedef enum {
@@ -28,7 +30,8 @@ typedef enum {
     st_no_dial,
     st_hang_up,
     st_int_ring, // (9) Internal ring
-    st_int_established // (10) An inernal connection is establishe
+    st_int_accepted, // (10) An inernal connection was accepted
+    st_debounce //(11)
 } ext_fsm_state_t;
 
 

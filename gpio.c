@@ -351,16 +351,21 @@ void
 set_connections(uint8_t from, uint8_t to){
 
     //Converts numeric to bit value
-    uint8_t exch_lines[8] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
+    //TO Line Numbers are 1 to 8, not 0 to 7) since the rotary decoder outputs 1 to 10
+    //FROM Line numbers are 0 to 7, since the detector outputs 0 to 7
+    uint8_t exch_lines_to[9] = {0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
+    uint8_t exch_lines_from[8] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
 
-    write_ctrl_register(MATRIX_FROM, MCP_OLAT, exch_lines[from]);
-    write_ctrl_register(MATRIX_TO, MCP_OLAT, exch_lines[to]);
+
+    write_ctrl_register(MATRIX_FROM, MCP_OLAT, exch_lines_from[from]);
+    write_ctrl_register(MATRIX_TO, MCP_OLAT, exch_lines_to[to]);
 
 }
 
 void
 set_ext_connect(uint8_t from){
     //Converts numeric to bit value
+    //Line numbers are 0 to 7, since origin number is 0 to 7
     uint8_t exch_lines[8] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
 
     write_ctrl_register(MATRIX_FROM, MCP_OLAT, exch_lines[from]);
@@ -453,7 +458,7 @@ write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value
     wr_buf[0] = mcp_reg; // Register Address
     wr_buf[1] = cur_value; //
     if (write(fd,wr_buf,2) != 2)
-        printf("Failed to write to the i2c bus.\n");
+        printf("Failed to write to the mcp bit.\n");
 
     close(fd);
     pthread_mutex_unlock(&gpio_mutex_2);
@@ -461,7 +466,7 @@ write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value
 }
 
 //Using pseudo interrupts via file system
-int8_t wait_select(uint8_t sec, uint8_t usec, uint8_t gpio, bool timeout)
+int8_t wait_select(uint32_t sec, uint32_t usec, uint8_t gpio, bool timeout)
 {
     int filepath = 0;
     char str[100];

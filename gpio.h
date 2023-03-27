@@ -55,7 +55,7 @@
 #define LINE_2 (0x00400000)
 #define LINE_3 (0x00800000)
 #define LINE_4 (0x01000000)
-#define LINE_5 (0x00000020)
+#define LINE_5 (0x00000200)
 #define LINE_6 (0x02000000)
 #define LINE_7 (0x00020000)
 #define LINE_8 (0x00000020)
@@ -102,7 +102,7 @@ void set_connections(uint8_t from, uint8_t to);
 uint8_t hex2lines(uint8_t hex);
 uint8_t hex2notlines(uint8_t hex);
 void write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value, uint32_t id);
-int8_t wait_select(uint8_t sec, uint8_t usec, uint8_t gpio, bool timeout);
+int8_t wait_select(uint32_t sec, uint32_t usec, uint8_t gpio, bool timeout);
 int8_t file_gpio_init (uint8_t gpio, char *direction);
 uint32_t mmap_lvl_read(void);
 void mmap_gpio_set( uint8_t gpio, uint8_t value);

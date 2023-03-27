@@ -24,6 +24,7 @@ void *tf_rotary()
     static uint32_t tv_sec = 0;
     static uint32_t tv_usec = 0;
     static bool timeout = false;
+     uint8_t loop_status;
 
 
 
@@ -48,22 +49,20 @@ void *tf_rotary()
             pthread_mutex_unlock(&dial_mutex);
 
 
-            timeout = false;
-            loop_interrupt = wait_select(tv_sec, tv_usec, line2gpio[line_pointer], timeout);
+            timeout = true;
+            tv_sec = 30;
+            tv_usec = 000000;
+            loop_interrupt = wait_select(tv_sec, tv_usec, line2gpio[origin_number], timeout);
 
             //The interrupt was caused by hangup the receiver without dialing
-            if (line_requesting() == 0xff){
-                pthread_cond_signal(&cond_dialcomplete);
-                dial_status = stat_hangup;
-                rotary_state = st_rotary_idle;
-            }
 
-            else if (loop_interrupt > 0) {
+            if (loop_interrupt > 0) {
                 //Change on the loop_int line occured - switch to check timer_hangup, needs timeout
                 number_dialed_accum = 1;
                 dial_status = stat_open;
                 rotary_state = st_loop_open;
             }
+            //if the receiver is lifted without dialing for 30s an Alarm is generated
             else if (loop_interrupt == 0) {
                 dial_status = stat_nodial;
                 pthread_cond_signal(&cond_dialcomplete);
@@ -86,13 +85,13 @@ void *tf_rotary()
             tv_sec = 1;
             tv_usec = 000000;
             timeout = true;
-            loop_interrupt = wait_select(tv_sec, tv_usec, line2gpio[line_pointer], timeout);
+            loop_interrupt = wait_select(tv_sec, tv_usec, line2gpio[origin_number], timeout);
 
             // if interrupt occured, wait in dialcompl until no more pulses come
             if (loop_interrupt > 0) {
                 rotary_state = st_loop_closed;
             }
-            // Loop was open to long, origin hang up.
+            // Loop was open longer than 1s, origin hang up.
             else if (loop_interrupt == 0) {
                 dial_status = stat_hangup;
                 pthread_cond_signal(&cond_dialcomplete);
@@ -112,10 +111,10 @@ void *tf_rotary()
         case st_loop_closed:
             //Arm interrupt with timeout. A timeout means, there are no more dial pulses
             //dialing is complete
-            tv_sec = 1;
-            tv_usec = 500000;
+            tv_sec = 0;
+            tv_usec = 700000;
             timeout = true;
-            loop_interrupt = wait_select(tv_sec, tv_usec, line2gpio[line_pointer], timeout);
+            loop_interrupt = wait_select(tv_sec, tv_usec, line2gpio[origin_number], timeout);
 
 
             if (loop_interrupt > 0) {
