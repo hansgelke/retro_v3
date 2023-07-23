@@ -271,7 +271,7 @@ write_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint8_t write_data){
     wr_buf[0]=mcp_reg; // Register Address
     wr_buf[1]=write_data; //
     if (write(fd,wr_buf,2) != 2)
-        printf("Error gpio.c Line 188: Failed to write bus\n");
+        printf("Error gpio.c Line 274: Failed to write bus\n");
 
 
     close(fd);
@@ -440,7 +440,7 @@ write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value
 
     wr_buf[0] = mcp_reg;
     if (write(fd,wr_buf,1) != 1)
-        printf("Failed to write to the i2c bus.\n");
+        printf("Failed to write to the i2c bus when wr_buf.\n");
 
     if (read(fd,rd_buf,1) != 1) {
         /* ERROR HANDLING: i2c transaction failed */
@@ -592,11 +592,10 @@ init_gpios(){
     gpio_err_msg[8] = file_gpio_init(LOOP_CLOSED_N_8, "in");
     gpio_err_msg[9] = file_gpio_init(DTMF_INT, "in");
     gpio_err_msg[10] = file_gpio_init(RING_INDICATOR_N, "in");
-    gpio_err_msg[20] = file_gpio_init(PICK_UP_N, "in");
+    gpio_err_msg[11] = file_gpio_init(PICK_UP_N, "in");
 
     //Initialize GPIOs with edge trigger
 
-    gpio_err_msg[11] = set_edge_rising(DC_LOOP_INT);
     gpio_err_msg[12] = set_edge_both(LOOP_CLOSED_N_1);
     gpio_err_msg[13] = set_edge_both(LOOP_CLOSED_N_2);
     gpio_err_msg[14] = set_edge_both(LOOP_CLOSED_N_3);
@@ -605,6 +604,7 @@ init_gpios(){
     gpio_err_msg[17] = set_edge_both(LOOP_CLOSED_N_6);
     gpio_err_msg[18] = set_edge_both(LOOP_CLOSED_N_7);
     gpio_err_msg[19] = set_edge_both(LOOP_CLOSED_N_8);
+    //gpio_err_msg[20] = set_edge_rising(DC_LOOP_INT);
 
 
 
@@ -657,10 +657,10 @@ init_gpios(){
     // Polarity of the input signal
     write_ctrl_register(LOOP_DETECT, MCP_IPOL, 0x00);
     //Enables interrupts
-    write_ctrl_register(LOOP_DETECT, MCP_GPINTEN, 0xff);
+    write_ctrl_register(LOOP_DETECT, MCP_GPINTEN, 0x00);
     //controlls rising or falling, not relevant since we
     //interrupt on both edges
-    write_ctrl_register(LOOP_DETECT, MCP_DEFVAL, 0xff);
+    write_ctrl_register(LOOP_DETECT, MCP_DEFVAL, 0x00);
     write_ctrl_register(LOOP_DETECT, MCP_INTCON, 0x00);
     //Genearte Interrupt on rising and falling edge
     write_ctrl_register(LOOP_DETECT, MCP_IOCON, 0x02);

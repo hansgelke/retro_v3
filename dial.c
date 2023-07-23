@@ -24,7 +24,6 @@ void *tf_rotary()
     static uint32_t tv_sec = 0;
     static uint32_t tv_usec = 0;
     static bool timeout = false;
-     uint8_t loop_status;
 
 
 
@@ -82,8 +81,8 @@ void *tf_rotary()
             // wait_select return: -1 Failure, 0 = timeout, 0> success
             // In st_loop_closed the number is accumulated, or if no more pulses come, a completion
             // of the dial sequence is entered
-            tv_sec = 1;
-            tv_usec = 000000;
+            tv_sec = 0;
+            tv_usec =150000;
             timeout = true;
             loop_interrupt = wait_select(tv_sec, tv_usec, line2gpio[origin_number], timeout);
 
@@ -112,7 +111,7 @@ void *tf_rotary()
             //Arm interrupt with timeout. A timeout means, there are no more dial pulses
             //dialing is complete
             tv_sec = 0;
-            tv_usec = 700000;
+            tv_usec = 150000;
             timeout = true;
             loop_interrupt = wait_select(tv_sec, tv_usec, line2gpio[origin_number], timeout);
 

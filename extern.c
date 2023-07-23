@@ -83,6 +83,7 @@ void main_fsm()
 
     switch (ext_state) {
     case st_idle:
+        origin_number = line_requesting();
         //>>>>> GOTO st_ext_ring
         if (ring_timer > 0){
             melody = gb_ring;
@@ -91,22 +92,8 @@ void main_fsm()
             write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 5071);
             ext_state = st_ext_ring;
         }
-        else if (line_requesting() != 0xff) {
-            ext_state = st_debounce;
-        }
-        else ext_state = st_idle;
-
-        break;
-
-        /******************************************************************************
-     *                       Debounce Fork
-     ******************************************************************************/
-    case st_debounce:
-        usleep(10000);
-        if (line_requesting() != 0xff) {
-            // >>>>> GOTO st_offhook
-            origin_number = line_requesting();
-            melody = us_dial;
+        else if (origin_number != 0xff) {
+            melody = ger_dial;
             sem_post(&sem_signal);
             //set matrix to output dial tone
             write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3097);
@@ -114,13 +101,16 @@ void main_fsm()
             pthread_mutex_lock(&dial_mutex);
             pthread_cond_signal(&cond_dial);
             pthread_mutex_unlock(&dial_mutex);
+
+
+
+            //ext_state = st_debounce;
             ext_state = st_offhook;
+
         }
         else ext_state = st_idle;
 
-
         break;
-
 
 
         /******************************************************************************
@@ -160,19 +150,19 @@ void main_fsm()
          ******************************************************************************/
 
     case st_ext_accepted:
-
-        if (mmap_gpio_test(LOOP_CLOSED_N_1) == true){
-            //If loop is opened, hang up external line
-            //>>>>>>>>>>  GO TO IDLE  >>>>>>>>>>>>>>>>>>>>
-            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 0, 4057);
-            return_to_idle();
-            ext_state = st_idle;
-        }
-        else {
+//TEMPORARY DISABLED
+//        if (mmap_gpio_test(LOOP_CLOSED_N_1) == true){
+//            //If loop is opened, hang up external line
+//            //>>>>>>>>>>  GO TO IDLE  >>>>>>>>>>>>>>>>>>>>
+//            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 0, 4057);
+//            return_to_idle();
+//            ext_state = st_idle;
+//        }
+//        else {
             ext_state = st_ext_accepted;
 
-        }
-        break;
+//        }
+//        break;
 
         /******************************************************************************
         *                       State OFF HOOK

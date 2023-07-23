@@ -53,6 +53,8 @@ int main(void) {
     init_gpios();
     init_pwm();
 
+    write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3097);
+
 
 
 
