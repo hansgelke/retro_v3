@@ -12,7 +12,7 @@ pthread_cond_t cond_dialcomplete = PTHREAD_COND_INITIALIZER;
 extern uint8_t number_dialed;
 
 uint8_t first_num;
-uint8_t destination_number;
+uint8_t dialed_number;
 
 
 ext_fsm_state_t next_state;
@@ -98,6 +98,8 @@ void main_fsm()
             //set matrix to output dial tone
             write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3097);
             write_mcp_bit(MATRIX_FROM, MCP_OLAT, origin_number, 1, 3098);
+
+            //Arm rotary dial receiver
             pthread_mutex_lock(&dial_mutex);
             pthread_cond_signal(&cond_dial);
             pthread_mutex_unlock(&dial_mutex);
@@ -150,25 +152,25 @@ void main_fsm()
          ******************************************************************************/
 
     case st_ext_accepted:
-//TEMPORARY DISABLED
-//        if (mmap_gpio_test(LOOP_CLOSED_N_1) == true){
-//            //If loop is opened, hang up external line
-//            //>>>>>>>>>>  GO TO IDLE  >>>>>>>>>>>>>>>>>>>>
-//            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 0, 4057);
-//            return_to_idle();
-//            ext_state = st_idle;
-//        }
-//        else {
-            ext_state = st_ext_accepted;
+        //TEMPORARY DISABLED
+        //        if (mmap_gpio_test(LOOP_CLOSED_N_1) == true){
+        //            //If loop is opened, hang up external line
+        //            //>>>>>>>>>>  GO TO IDLE  >>>>>>>>>>>>>>>>>>>>
+        //            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 0, 4057);
+        //            return_to_idle();
+        //            ext_state = st_idle;
+        //        }
+        //        else {
+        ext_state = st_ext_accepted;
 
-//        }
-//        break;
+        //        }
+        break;
 
         /******************************************************************************
         *                       State OFF HOOK
         ******************************************************************************/
     case st_offhook:
-
+        // Wait for dial complete
         pthread_mutex_lock(&dial_mutex);
         pthread_cond_wait(&cond_dialcomplete, &dial_mutex);
         pthread_mutex_unlock(&dial_mutex);
@@ -179,8 +181,23 @@ void main_fsm()
         switch (dial_status_switch) {
         case stat_dial_complete:
 
+            //REQUESTING PHONE IS DIALING OPERATOR TO GET OUTSIDE LINE
+            if(first_num == 10){
+                //Connect the requesting device to FROM Matrix
 
-            if(first_num == 0x10){
+                // Clear the connection Matrix
+                write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00);
+                write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00);
+                // Connects the Matrix for the speach channel
+                set_ext_connect(origin_number);
+
+                //Connect the Tone Generator to the External Splitter
+                //Output DTMF Tone to Splitter_in through FROM Matrix
+                write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3097);
+                //Set FROM Matrix to connect to EXT_IN Signal of Splitter
+                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_FROM_ENABLE, 1, 4057);
+                //Turn on Relay
+                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 1, 4057);
                 ext_state = st_outsideline;
             }
             else {
@@ -224,22 +241,84 @@ void main_fsm()
         pthread_cond_wait(&cond_dialcomplete, &dial_mutex);
         pthread_mutex_unlock(&dial_mutex);
 
-        destination_number = number_dialed;
+        dialed_number = number_dialed;
         dial_status_switch = dial_status;
         //>>>>> GOTO st_int_ring
         melody = gb_ring;
-        ac_on(true,destination_number);
+        ac_on(true,dialed_number);
         sem_post(&sem_signal);
         write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 5071);
         ext_state = st_int_ring;
 
-
+        break;
         /******************************************************************************
             *                       State OUTSIDE LINE
            ******************************************************************************/
 
     case st_outsideline:
 
+        //Arm rotary dial receiver
+        pthread_mutex_lock(&dial_mutex);
+        pthread_cond_signal(&cond_dial);
+        pthread_mutex_unlock(&dial_mutex);
+
+        pthread_mutex_lock(&dial_mutex);
+        pthread_cond_wait(&cond_dialcomplete, &dial_mutex);
+        pthread_mutex_unlock(&dial_mutex);
+
+        switch (dial_status_switch) {
+        //Normal completion of dial
+        case stat_dial_complete:
+            dialed_number = number_dialed;
+            dial_status_switch = dial_status;
+            //Ready for the next number
+            ext_state = st_outsideline;
+            break;
+
+        case stat_nodial:
+            //User waits more than 30s to dial
+            // Turn off  relay, open all connections
+            return_to_idle();
+
+            ext_state = st_idle;
+
+            break;
+
+        case stat_hangup:
+            //User hung up instead of dialing
+            // Turn off  relay, open all connections
+            return_to_idle();
+
+            ext_state = st_idle;
+
+            break;
+
+        }
+        break;
+
+
+
+
+
+
+
+
+
+        //>>>>> GOTO st_int_ring
+
+        //if phone is hang up go to idle
+        if (line_requesting() == 0xff){
+            //>>>>>>>>>>  GO TO st_idle  >>>>>>>>>>>>>>>>>>>>
+            //clear all connections
+            return_to_idle();
+
+
+            ext_state = st_idle;
+        }
+        else {
+            ext_state = st_outsideline;
+
+        }
 
         break;
         /***************************************************/
@@ -259,6 +338,7 @@ void main_fsm()
 
 
     case st_int_ring:
+        origin_number = line_requesting();
         if (mmap_gpio_test(PICK_UP_N) == true){
             //>>>> GOTO st_int_accepted
             sem_init(&sem_signal,0,0);
@@ -267,12 +347,12 @@ void main_fsm()
             write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00);
             write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff);
 
-            set_connections(origin_number, destination_number);
+
 
             ext_state = st_int_accepted;
 
         }
-        else if (line_requesting() == 0xff){
+        else if (origin_number == 0xff){
             //>>>> GOTO st_idle
 
             sem_init(&sem_signal,0,0);

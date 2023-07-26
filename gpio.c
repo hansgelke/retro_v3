@@ -364,14 +364,17 @@ set_connections(uint8_t from, uint8_t to){
 
 void
 set_ext_connect(uint8_t from){
-    //Converts numeric to bit value
-    //Line numbers are 0 to 7, since origin number is 0 to 7
-    uint8_t exch_lines[8] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
 
-    write_ctrl_register(MATRIX_FROM, MCP_OLAT, exch_lines[from]);
-    write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 1, 5345);
+    //Converts numeric to bit value
+    //FROM Line numbers are 0 to 7, since the detector outputs 0 to 7
+    uint8_t exch_lines_from[8] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
+    //Sets From Matrix
+    write_ctrl_register(MATRIX_FROM, MCP_OLAT, exch_lines_from[from]);
+   //Connect External Enable of TO Matrix
+    write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 1, 4057);
 
 }
+
 
 uint8_t
 hex2lines(uint8_t hex){
@@ -555,6 +558,11 @@ return_to_idle(){
     write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00);
     write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00);
     write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff);
+    write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 0, 3097);
+    write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_FROM_ENABLE, 0, 4057);
+    write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 0, 4057);
+    write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 0, 4057);
+
 }
 
 /****************************************************************

@@ -59,11 +59,14 @@ void *tf_rotary()
                 //Change on the loop_int line occured - switch to check timer_hangup, needs timeout
                 number_dialed_accum = 1;
                 dial_status = stat_open;
+                // Message to calling function that dial is complete
+                //pthread_cond_signal(&cond_dialcomplete);
                 rotary_state = st_loop_open;
             }
             //if the receiver is lifted without dialing for 30s an Alarm is generated
             else if (loop_interrupt == 0) {
                 dial_status = stat_nodial;
+                //Message to callling function that no dial occured
                 pthread_cond_signal(&cond_dialcomplete);
                 rotary_state = st_rotary_idle;
             }
@@ -90,7 +93,7 @@ void *tf_rotary()
             if (loop_interrupt > 0) {
                 rotary_state = st_loop_closed;
             }
-            // Loop was open longer than 1s, origin hang up.
+            // Loop was open longer than 150 ms, out of spec for dial pulse ->origin hang up.
             else if (loop_interrupt == 0) {
                 dial_status = stat_hangup;
                 pthread_cond_signal(&cond_dialcomplete);
