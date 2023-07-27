@@ -56,11 +56,10 @@ void *tf_rotary()
             //The interrupt was caused by hangup the receiver without dialing
 
             if (loop_interrupt > 0) {
-                //Change on the loop_int line occured - switch to check timer_hangup, needs timeout
+                //Loop was opened by rotatry pulse
+                // Normal detection of interrupt, 30s timeout not fullfilled
                 number_dialed_accum = 1;
                 dial_status = stat_open;
-                // Message to calling function that dial is complete
-                //pthread_cond_signal(&cond_dialcomplete);
                 rotary_state = st_loop_open;
             }
             //if the receiver is lifted without dialing for 30s an Alarm is generated
@@ -127,7 +126,8 @@ void *tf_rotary()
             //Timeout no more dial pulses
             else if (loop_interrupt == 0) {
 
-                //>>>>>>>> GOTO st_rotary_idle
+                //The loop remained closed for 150 ms, which means no dialing pulse
+                //(Loop open) is following the status information dial_complete is send
 
                 number_dialed = number_dialed_accum;
                 dial_status = stat_dial_complete;

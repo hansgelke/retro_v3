@@ -26,6 +26,7 @@
 
 
 sem_t sem_signal;
+sem_t sem_dtmf;
 bool test_mode;
 //Function declarations
 

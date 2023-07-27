@@ -16,6 +16,8 @@
 sem_t sem_dial;
 sem_t sem_dial_complete;
 uint8_t origin_number;
+uint8_t dtmf_rd_idx;
+uint8_t dtmf_wr_idx;
 
 
 

@@ -52,6 +52,9 @@ int main(void) {
     test_mode = false;
     init_gpios();
     init_pwm();
+    sem_init(&sem_dtmf,0,0);
+    sem_init(&sem_signal,0,0);
+    return_to_idle();
 
     write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3097);
 
@@ -62,7 +65,7 @@ int main(void) {
      *************** Initialize Tasks ***************************
      ************************************************************/
 
-    pthread_t t_pwm, t_tone_gen, t_generate_signals, t_rotary, t_main_fsm ;
+    pthread_t t_pwm, t_tone_gen, t_generate_signals, t_rotary, t_main_fsm, t_play_dtmf;
     uint8_t iret1;
 
     iret1 = pthread_create(&t_pwm, NULL, &tf_pwm, NULL);
@@ -70,6 +73,7 @@ int main(void) {
     iret1 = pthread_create(&t_main_fsm, NULL, &tf_main_fsm, NULL);
     iret1 = pthread_create(&t_tone_gen, NULL, &tf_tone_gen, NULL);
     iret1 = pthread_create(&t_generate_signals, NULL, &tf_generate_signals, NULL);
+    iret1 = pthread_create(&t_play_dtmf, NULL, &tf_play_dtmf, NULL);
     usleep(10000);
 
 
@@ -78,6 +82,7 @@ int main(void) {
     pthread_join(t_main_fsm, NULL);
     pthread_join(t_tone_gen, NULL);
     pthread_join(t_generate_signals, NULL);
+    pthread_join(t_play_dtmf, NULL);
 
 }
 

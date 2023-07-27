@@ -9,6 +9,11 @@ pthread_mutex_t dial_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond_dial = PTHREAD_COND_INITIALIZER;
 pthread_cond_t cond_dialcomplete = PTHREAD_COND_INITIALIZER;
 
+pthread_mutex_t dtmf_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+//sem_t sem_ring;
+sem_t sem_dtmf;
+
 extern uint8_t number_dialed;
 
 uint8_t first_num;
@@ -20,7 +25,8 @@ ext_fsm_state_t ext_state = st_idle ;
 
 uint32_t ring_timer = 0;
 uint8_t dial_status = 0;
-uint8_t dial_status_switch = 0;
+
+extern uint8_t mfv_buffer[32];
 
 
 void *tf_main_fsm()
@@ -93,7 +99,7 @@ void main_fsm()
             ext_state = st_ext_ring;
         }
         else if (origin_number != 0xff) {
-            melody = ger_dial;
+            melody = ger_dial ;
             sem_post(&sem_signal);
             //set matrix to output dial tone
             write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3097);
@@ -104,9 +110,6 @@ void main_fsm()
             pthread_cond_signal(&cond_dial);
             pthread_mutex_unlock(&dial_mutex);
 
-
-
-            //ext_state = st_debounce;
             ext_state = st_offhook;
 
         }
@@ -176,9 +179,8 @@ void main_fsm()
         pthread_mutex_unlock(&dial_mutex);
 
         first_num = number_dialed;
-        dial_status_switch = dial_status;
 
-        switch (dial_status_switch) {
+        switch (dial_status) {
         case stat_dial_complete:
 
             //REQUESTING PHONE IS DIALING OPERATOR TO GET OUTSIDE LINE
@@ -186,8 +188,11 @@ void main_fsm()
                 //Connect the requesting device to FROM Matrix
 
                 // Clear the connection Matrix
-                write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00);
-                write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00);
+                // Temporyry for diagnostics
+                write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3097);
+                write_mcp_bit(MATRIX_FROM, MCP_OLAT, origin_number, 1, 3098);
+                //write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00);
+                //write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00);
                 // Connects the Matrix for the speach channel
                 set_ext_connect(origin_number);
 
@@ -198,6 +203,8 @@ void main_fsm()
                 write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_FROM_ENABLE, 1, 4057);
                 //Turn on Relay
                 write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 1, 4057);
+                //The write pointer for the DTMF signals is set to 0 when outside_line is entered
+                dtmf_wr_idx = 0;
                 ext_state = st_outsideline;
             }
             else {
@@ -242,7 +249,6 @@ void main_fsm()
         pthread_mutex_unlock(&dial_mutex);
 
         dialed_number = number_dialed;
-        dial_status_switch = dial_status;
         //>>>>> GOTO st_int_ring
         melody = gb_ring;
         ac_on(true,dialed_number);
@@ -262,16 +268,28 @@ void main_fsm()
         pthread_cond_signal(&cond_dial);
         pthread_mutex_unlock(&dial_mutex);
 
+        //Wait for dial complete
         pthread_mutex_lock(&dial_mutex);
         pthread_cond_wait(&cond_dialcomplete, &dial_mutex);
         pthread_mutex_unlock(&dial_mutex);
 
-        switch (dial_status_switch) {
+        switch (dial_status) {
         //Normal completion of dial
         case stat_dial_complete:
             dialed_number = number_dialed;
-            dial_status_switch = dial_status;
             //Ready for the next number
+
+            //When a number is dialed in st_ousideline, the number is stored in a buffer
+            // The buffer is incremented for each number
+            // ine tone.c the numbers are taken out of the buffer with dtmf_rd_idx
+            // Post a semaphore sem_dtmf to unblock dtmf generation
+            pthread_mutex_lock(&dtmf_mutex);
+            mfv_buffer[dtmf_wr_idx] = number_dialed;
+            dtmf_wr_idx++;
+            sem_post(&sem_dtmf);
+            pthread_mutex_unlock(&dtmf_mutex);
+
+
             ext_state = st_outsideline;
             break;
 
@@ -279,7 +297,6 @@ void main_fsm()
             //User waits more than 30s to dial
             // Turn off  relay, open all connections
             return_to_idle();
-
             ext_state = st_idle;
 
             break;
@@ -288,19 +305,12 @@ void main_fsm()
             //User hung up instead of dialing
             // Turn off  relay, open all connections
             return_to_idle();
-
             ext_state = st_idle;
 
             break;
 
         }
         break;
-
-
-
-
-
-
 
 
 

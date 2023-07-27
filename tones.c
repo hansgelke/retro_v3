@@ -1,5 +1,22 @@
-#include "tones.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <gst/gst.h>
+#include <semaphore.h>
+#include "dial.h"
+#include "tones.h"
+#include "main.h"
+#include "extern.h"
+
+gfloat freq_low;
+gfloat freq_high;
+
+uint8_t mfv_buffer[32];
+
+static gdouble dtmf_freq_low[11] = {941.0, 697.0, 697.0, 697.0, 770.0, 770.0, 770.0, 852.0, 852.0, 852.0, 941.0};
+static gdouble dtmf_freq_high[11] = {1336.0, 1209.0, 1336.0, 1477.0, 1209.0, 1336.0, 1477.0, 1209.0, 1336.0, 1477.0, 1336.0};
+
+
 
 
 /****************************************************************
@@ -26,6 +43,7 @@ void *tf_tone_gen()
 
     queue_audio_1 = gst_element_factory_make("queue", "queue_audio_1");
     queue_audio_2 = gst_element_factory_make("queue", "queue_audio_2");
+    usleep (700000);
 
     tone_src1 = gst_element_factory_make ("audiotestsrc", "src1");
     g_object_set (G_OBJECT (tone_src1), "wave", 0, NULL);
@@ -99,25 +117,69 @@ void *tf_tone_gen()
         fprintf (stderr, "pads could not be linked\n");
         exit (1);
     }
-    //    /******************************************/
-        //    /* PLAY TONES PIPELINE */
-        //    /******************************************/
+       /******************************************/
+       /* PLAY TONES PIPELINE */
+      /******************************************/
 
-        // gst_element_set_state (tone_pipeline, GST_STATE_PLAYING);
 
-        /* we need to run a GLib main loop to get the messages */
-        loop = g_main_loop_new (NULL, FALSE);
+    /* we need to run a GLib main loop to get the messages */
+    loop = g_main_loop_new (NULL, FALSE);
 
-        /* Runs a main loop until g_main_loop_quit() is called on the loop */
-        g_print ("Running_Tones_...\n");
-        g_main_loop_run (loop);
+    /* Runs a main loop until g_main_loop_quit() is called on the loop */
+    g_print ("Running_Tones_...\n");
+    g_main_loop_run (loop);
 
-        /* Out of the main loop, clean up nicely */
-        g_print ("Returned, stopping Tones\n");
-        //gst_element_set_state (tone_pipeline, GST_STATE_NULL);
 
-        g_print ("Deleting pipeline\n");
-        gst_object_unref (tone_pipeline);
-        gst_object_unref (adder_pad_1);
-        gst_object_unref (adder_pad_2);
+
+
+    /* Out of the main loop, clean up nicely */
+    g_print ("Returned, stopping Tones\n");
+    //gst_element_set_state (tone_pipeline, GST_STATE_NULL);
+
+    g_print ("Deleting pipeline\n");
+    gst_object_unref (tone_pipeline);
+    gst_object_unref (adder_pad_1);
+    gst_object_unref (adder_pad_2);
+}
+
+/******************************************/
+/* DTMF BUFFER TASK */
+/******************************************/
+
+//loops and waits for a semaphore. If there is a semaphore it calls a function to play a dtmf tone
+
+void
+*tf_play_dtmf()
+
+{
+    struct sched_param para_dtmf;
+    para_dtmf.sched_priority = 40;
+    sched_setscheduler(0,SCHED_RR, &para_dtmf);
+    while(1)
+    {
+
+        sem_wait(&sem_dtmf); //wait for semaphore
+
+//play dtmf tone
+
+
+        g_object_set (G_OBJECT (tone_src1), "volume", 0.5, NULL);
+        g_object_set (G_OBJECT (tone_src2), "volume", 0.5, NULL);
+        g_object_set (G_OBJECT (tone_src1), "wave", 0, NULL);
+        g_object_set (G_OBJECT (tone_src2), "wave", 0, NULL);
+
+//freq_low = dtmf_freq_low[mfv_buffer[dtmf_rd_idx]];
+//freq_high = dtmf_freq_high[mfv_buffer[dtmf_rd_idx]];
+
+       g_object_set (G_OBJECT (tone_src1), "freq", dtmf_freq_low[mfv_buffer[dtmf_rd_idx]], NULL);
+       g_object_set (G_OBJECT (tone_src2), "freq", dtmf_freq_high[mfv_buffer[dtmf_rd_idx]], NULL);
+
+        gst_element_set_state (tone_pipeline, GST_STATE_PLAYING);
+        usleep (200000);
+        gst_element_set_state (tone_pipeline, GST_STATE_NULL);
+        usleep (500000);
+        dtmf_rd_idx++; //increment read index
+
     }
+
+}
