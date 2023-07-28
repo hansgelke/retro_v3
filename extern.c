@@ -11,7 +11,6 @@ pthread_cond_t cond_dialcomplete = PTHREAD_COND_INITIALIZER;
 
 pthread_mutex_t dtmf_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-//sem_t sem_ring;
 sem_t sem_dtmf;
 
 extern uint8_t number_dialed;
@@ -180,29 +179,40 @@ void main_fsm()
 
         first_num = number_dialed;
 
+        //Evaluate return Message from rotary encoder
         switch (dial_status) {
         case stat_dial_complete:
 
             //REQUESTING PHONE IS DIALING OPERATOR TO GET OUTSIDE LINE
             if(first_num == 10){
+                //Withdraw tokens from Tone-Signal Generation
+                // after dialing 0, no tone should be audible
+                sem_init(&sem_signal,0,0);
+                {gst_element_set_state (tone_pipeline, GST_STATE_NULL);
+                }
                 //Connect the requesting device to FROM Matrix
 
                 // Clear the connection Matrix
-                // Temporyry for diagnostics
-                write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3097);
-                write_mcp_bit(MATRIX_FROM, MCP_OLAT, origin_number, 1, 3098);
-                //write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00);
-                //write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00);
+                write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00);
+                write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00);
+                write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_TO, 0, 3097);
+                write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 0, 3097);
+                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 0, 4057);
+                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_FROM_ENABLE, 0, 4057);
+
+
                 // Connects the Matrix for the speach channel
                 set_ext_connect(origin_number);
 
                 //Connect the Tone Generator to the External Splitter
                 //Output DTMF Tone to Splitter_in through FROM Matrix
-                write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3097);
+                write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_TO, 1, 3097);
                 //Set FROM Matrix to connect to EXT_IN Signal of Splitter
-                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_FROM_ENABLE, 1, 4057);
-                //Turn on Relay
+                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 1, 4057);
+                //Turn on Relay - temporary disabled
                 write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 1, 4057);
+
+
                 //The write pointer for the DTMF signals is set to 0 when outside_line is entered
                 dtmf_wr_idx = 0;
                 ext_state = st_outsideline;
@@ -286,6 +296,7 @@ void main_fsm()
             pthread_mutex_lock(&dtmf_mutex);
             mfv_buffer[dtmf_wr_idx] = number_dialed;
             dtmf_wr_idx++;
+            // Post a token, which triggers to play a dtmf tone in *tf_play_dtmf (tones.c)
             sem_post(&sem_dtmf);
             pthread_mutex_unlock(&dtmf_mutex);
 

@@ -168,14 +168,14 @@ void
         g_object_set (G_OBJECT (tone_src1), "wave", 0, NULL);
         g_object_set (G_OBJECT (tone_src2), "wave", 0, NULL);
 
-//freq_low = dtmf_freq_low[mfv_buffer[dtmf_rd_idx]];
-//freq_high = dtmf_freq_high[mfv_buffer[dtmf_rd_idx]];
+freq_low = dtmf_freq_low[mfv_buffer[dtmf_rd_idx]];
+freq_high = dtmf_freq_high[mfv_buffer[dtmf_rd_idx]];
 
        g_object_set (G_OBJECT (tone_src1), "freq", dtmf_freq_low[mfv_buffer[dtmf_rd_idx]], NULL);
        g_object_set (G_OBJECT (tone_src2), "freq", dtmf_freq_high[mfv_buffer[dtmf_rd_idx]], NULL);
 
         gst_element_set_state (tone_pipeline, GST_STATE_PLAYING);
-        usleep (200000);
+        usleep (500000);
         gst_element_set_state (tone_pipeline, GST_STATE_NULL);
         usleep (500000);
         dtmf_rd_idx++; //increment read index
