@@ -13,9 +13,12 @@ gfloat freq_high;
 
 uint8_t mfv_buffer[32];
 
-static gdouble dtmf_freq_low[11] = {941.0, 697.0, 697.0, 697.0, 770.0, 770.0, 770.0, 852.0, 852.0, 852.0, 941.0};
-static gdouble dtmf_freq_high[11] = {1336.0, 1209.0, 1336.0, 1477.0, 1209.0, 1336.0, 1477.0, 1209.0, 1336.0, 1477.0, 1336.0};
+//static gdouble dtmf_freq_low[11] = {918.0, 680.0, 680.0, 680.0, 752.0, 752.0, 752.0, 831.0, 831.0, 831.0, 918.0};
+//static gdouble dtmf_freq_high[11] = {1304.0, 1180.0, 1304.0, 1441.0, 1180.0, 1304.0, 1441.0, 1180.0, 1304.0, 1441.0, 1304.0};
 
+//Temporary to test on Fritzbox
+static gdouble dtmf_freq_low[11] = {918.0, 680.0, 680.0, 680.0, 752.0, 752.0, 752.0, 831.0, 831.0, 918.0, 918.0};
+static gdouble dtmf_freq_high[11] = {1304.0, 1180.0, 1304.0, 1441.0, 1180.0, 1304.0, 1441.0, 1180.0, 1304.0, 1180.0, 1304.0};
 
 
 
@@ -53,7 +56,7 @@ void *tf_tone_gen()
 
     tone_src2 = gst_element_factory_make ("audiotestsrc", "src2");
     g_object_set (G_OBJECT (tone_src2), "wave", 0, NULL);
-    g_object_set (G_OBJECT (tone_src2), "volume", 0.4, NULL);
+    g_object_set (G_OBJECT (tone_src2), "volume", 0.0, NULL);
     // frequency object set is later reassigned in ring controller
     //g_object_set (G_OBJECT (tone_src2), "freq", 400.0, NULL);
 
@@ -163,8 +166,8 @@ void
 //play dtmf tone
 
 
-        g_object_set (G_OBJECT (tone_src1), "volume", 0.5, NULL);
-        g_object_set (G_OBJECT (tone_src2), "volume", 0.5, NULL);
+        g_object_set (G_OBJECT (tone_src1), "volume", 0.7, NULL);
+        g_object_set (G_OBJECT (tone_src2), "volume", 0.7, NULL);
         g_object_set (G_OBJECT (tone_src1), "wave", 0, NULL);
         g_object_set (G_OBJECT (tone_src2), "wave", 0, NULL);
 
@@ -175,9 +178,9 @@ freq_high = dtmf_freq_high[mfv_buffer[dtmf_rd_idx]];
        g_object_set (G_OBJECT (tone_src2), "freq", dtmf_freq_high[mfv_buffer[dtmf_rd_idx]], NULL);
 
         gst_element_set_state (tone_pipeline, GST_STATE_PLAYING);
-        usleep (500000);
+        usleep (200000);
         gst_element_set_state (tone_pipeline, GST_STATE_NULL);
-        usleep (500000);
+        usleep (200000);
         dtmf_rd_idx++; //increment read index
 
     }

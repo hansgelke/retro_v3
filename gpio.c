@@ -263,7 +263,7 @@ write_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint8_t write_data){
     }
 
     if (ioctl(fd,I2C_SLAVE,device_addr) < 0) {
-        printf("Error gpio.c Line 179: Failed to set I2C device as slave.\n");
+        printf("Error gpio.c Line 266: Failed to set I2C device as slave.\n");
 
     }
 
@@ -562,7 +562,6 @@ return_to_idle(){
     write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_FROM_ENABLE, 0, 4057);
     write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 0, 4057);
     write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 0, 4057);
-
 }
 
 /****************************************************************

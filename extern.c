@@ -154,18 +154,16 @@ void main_fsm()
          ******************************************************************************/
 
     case st_ext_accepted:
-        //TEMPORARY DISABLED
-        //        if (mmap_gpio_test(LOOP_CLOSED_N_1) == true){
+        //If loop is opened, hang up external line
+                if (line_requesting() == 0xff){
         //            //If loop is opened, hang up external line
-        //            //>>>>>>>>>>  GO TO IDLE  >>>>>>>>>>>>>>>>>>>>
-        //            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 0, 4057);
-        //            return_to_idle();
-        //            ext_state = st_idle;
-        //        }
-        //        else {
-        ext_state = st_ext_accepted;
-
-        //        }
+        // >>>>>>>>>>  GO TO IDLE  >>>>>>>>>>>>>>>>>>>>
+              return_to_idle();
+              ext_state = st_idle;
+                }
+                else {
+              ext_state = st_ext_accepted;
+                }
         break;
 
         /******************************************************************************
@@ -185,12 +183,16 @@ void main_fsm()
 
             //REQUESTING PHONE IS DIALING OPERATOR TO GET OUTSIDE LINE
             if(first_num == 10){
+                //Clear the Dial Buffer Indexes
+                dtmf_rd_idx = 0;
+                dtmf_wr_idx = 0;
+
                 //Withdraw tokens from Tone-Signal Generation
                 // after dialing 0, no tone should be audible
                 sem_init(&sem_signal,0,0);
                 {gst_element_set_state (tone_pipeline, GST_STATE_NULL);
                 }
-                //Connect the requesting device to FROM Matrix
+
 
                 // Clear the connection Matrix
                 write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00);
@@ -206,9 +208,9 @@ void main_fsm()
 
                 //Connect the Tone Generator to the External Splitter
                 //Output DTMF Tone to Splitter_in through FROM Matrix
-                write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_TO, 1, 3097);
+                //write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3097);
                 //Set FROM Matrix to connect to EXT_IN Signal of Splitter
-                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 1, 4057);
+                //write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_FROM_ENABLE, 1, 4057);
                 //Turn on Relay - temporary disabled
                 write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 1, 4057);
 
@@ -306,9 +308,9 @@ void main_fsm()
 
         case stat_nodial:
             //User waits more than 30s to dial
-            // Turn off  relay, open all connections
-            return_to_idle();
-            ext_state = st_idle;
+            //Here no Error, FSM stays in same state
+
+            ext_state = st_outsideline;
 
             break;
 
