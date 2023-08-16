@@ -31,7 +31,6 @@
 
 
 void *virtual_pwm_base;
-int fd;
 
 /****************************************************************
  * mmap virtual base calculation

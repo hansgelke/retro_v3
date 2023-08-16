@@ -76,7 +76,7 @@ test_menue()
             return 0;
         }
         sscanf(&line[0], "%x %x %x", &a_arg1, &a_arg2, &a_arg3);
-        write_ctrl_register(a_arg1, a_arg2, a_arg3);
+        write_ctrl_register(a_arg1, a_arg2, a_arg3, 1126);
         printf("Device:%x Register:%x is set to:%x \n", a_arg1, a_arg2, a_arg3);
     }
 
@@ -185,8 +185,8 @@ test_menue()
 
         pthread_mutex_lock(&lock_i2c);
         pwm_reg_write(PWM_CTL, 0x81);
-        write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(a_arg1));
-        write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(a_arg1));
+        write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(a_arg1), 1121);
+        write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(a_arg1), 1122);
         write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 3236);
         pthread_mutex_unlock(&lock_i2c);
 
@@ -196,8 +196,8 @@ test_menue()
 
     else if (strcmp(line, "rings\n") == 0){
         pthread_mutex_lock(&lock_i2c);
-        write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00);
-        write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff);
+        write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00, 1123);
+        write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff, 1124);
         write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 3249);
         pthread_mutex_unlock(&lock_i2c);
 
@@ -243,7 +243,7 @@ test_menue()
         write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3221);
         //write_ctrl_register(MATRIX_FROM, MCP_OLAT, hex2lines(a_arg1));
         //turn off all FETs before turning on specific channel
-        write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00);
+        write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00, 1125);
         write_mcp_bit(MATRIX_FROM, MCP_OLAT, a_arg1, 1, 3221);
     }
 

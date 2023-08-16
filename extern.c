@@ -195,8 +195,8 @@ void main_fsm()
 
 
                 // Clear the connection Matrix
-                write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00);
-                write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00);
+                write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00, 1111);
+                write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00, 1112);
                 write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_TO, 0, 3097);
                 write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 0, 3097);
                 write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 0, 4057);
@@ -367,8 +367,8 @@ void main_fsm()
             sem_init(&sem_signal,0,0);
             write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 5071);
             //Turn all lines back to DC mode
-            write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00);
-            write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff);
+            write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00, 1113);
+            write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff, 1114);
 
 
 

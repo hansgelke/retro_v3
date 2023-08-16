@@ -11,6 +11,10 @@
 
 void *virtual_gpio_base;
 
+uint8_t fd_bus0;
+uint8_t fd_bus1;
+uint8_t io_fd_rd;
+uint8_t io_fd_wr;
 uint8_t fd;
 
 pthread_mutex_t gpio_mutex_1 = PTHREAD_MUTEX_INITIALIZER;
@@ -171,40 +175,40 @@ mmap_lvl_read(void)
 
 uint8_t
 line_requesting(){
-uint32_t raw_lvlbits =0xff;
-uint32_t lvlbits =0x00;
-uint8_t line_number;
+    uint32_t raw_lvlbits =0xff;
+    uint32_t lvlbits =0x00;
+    uint8_t line_number;
 
 
-raw_lvlbits = mmap_lvl_read();
-lvlbits = ~raw_lvlbits;
-if ((lvlbits) & LINE_1){
-    line_number = 0x0;
-}
-else if ((lvlbits) & LINE_2){
-    line_number = 0x1;
-}
-else if ((lvlbits) & LINE_3){
-    line_number = 0x2;
-}
-else if ((lvlbits) & LINE_4){
-    line_number = 0x3;
-}
-else if ((lvlbits) & LINE_5){
-    line_number = 0x4;
-}
-else if ((lvlbits) & LINE_6){
-    line_number = 0x5;
-}
-else if ((lvlbits) & LINE_7){
-    line_number = 0x6;
-}
-else if ((lvlbits) & LINE_8){
-    line_number = 0x7;
-}
-else {
-    line_number = 0xff;
-}
+    raw_lvlbits = mmap_lvl_read();
+    lvlbits = ~raw_lvlbits;
+    if ((lvlbits) & LINE_1){
+        line_number = 0x0;
+    }
+    else if ((lvlbits) & LINE_2){
+        line_number = 0x1;
+    }
+    else if ((lvlbits) & LINE_3){
+        line_number = 0x2;
+    }
+    else if ((lvlbits) & LINE_4){
+        line_number = 0x3;
+    }
+    else if ((lvlbits) & LINE_5){
+        line_number = 0x4;
+    }
+    else if ((lvlbits) & LINE_6){
+        line_number = 0x5;
+    }
+    else if ((lvlbits) & LINE_7){
+        line_number = 0x6;
+    }
+    else if ((lvlbits) & LINE_8){
+        line_number = 0x7;
+    }
+    else {
+        line_number = 0xff;
+    }
 
     return line_number;
 
@@ -232,49 +236,27 @@ bool mmap_gpio_test(uint8_t gpio)
  * i2c-dev
  ****************************************************************/
 void
-write_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint8_t write_data){
+write_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint8_t write_data, uint32_t id){
     pthread_mutex_lock(&gpio_mutex_3);
     uint8_t wr_buf[2];
 
+    if ((device_addr == MATRIX_TO) | (device_addr == MATRIX_FROM) | (device_addr == DTMF_READ))  {
 
+        io_fd_wr = fd_bus1; }
+    else {
+        io_fd_wr = fd_bus0; }
 
-    char *i2c_device = "/dev/i2c-4";
-
-    switch (device_addr)
-    {
-    case MATRIX_TO:
-        i2c_device = "/dev/i2c-5";
-        break;
-    case MATRIX_FROM:
-        i2c_device = "/dev/i2c-5";
-        break;
-    case DTMF_READ:
-        i2c_device = "/dev/i2c-5";
-        break;
-    default:
-        i2c_device = "/dev/i2c-4";
-    }
-    //Switches the I2C bus depending on I2C device address
-
-
-    if ((fd = open(i2c_device,O_RDWR)) < 0) {
-        printf("Error gpio.c Line 174: Failed to open I2C device \n O_RDWR");
+    if (ioctl(io_fd_wr,I2C_SLAVE,device_addr) < 0) {
+        printf("Failed to set I2C Bus as slave\n");
         exit(1);
-    }
-
-    if (ioctl(fd,I2C_SLAVE,device_addr) < 0) {
-        printf("Error gpio.c Line 266: Failed to set I2C device as slave.\n");
-
     }
 
     //Write I2C Register
     wr_buf[0]=mcp_reg; // Register Address
     wr_buf[1]=write_data; //
-    if (write(fd,wr_buf,2) != 2)
-        printf("Error gpio.c Line 274: Failed to write bus\n");
+    if (write(io_fd_wr,wr_buf,2) != 2)
+        printf("Error gpio.c Line 258: Failed to write bus ID: %d\n", id);
 
-
-    close(fd);
     pthread_mutex_unlock(&gpio_mutex_3);
 
 }
@@ -284,64 +266,40 @@ write_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint8_t write_data){
 
 uint8_t
 read_ctrl_register(uint8_t device_addr, uint8_t mcp_reg, uint32_t id){
-   // pthread_mutex_lock(&gpio_mutex_1);
+    // pthread_mutex_lock(&gpio_mutex_1);
     uint8_t register_data = 0;
     uint8_t rd_buf[1];
     uint8_t wr_buf[1];
 
 
+    if ((device_addr == MATRIX_TO) | (device_addr == MATRIX_FROM) | (device_addr == DTMF_READ))  {
 
-    char *i2c_device = "/dev/i2c-4";
-    //Set the i2c Bus 4 or 5 depending on the I2Cchip beeing written
-    //Only MATRIX_TO, MATRIX_FROM and DTMF_I2C devices are on I2c-5
-    // All the rest is in I2C-4
-
-
-    switch (device_addr)
-    {
-    case MATRIX_TO:
-        i2c_device = "/dev/i2c-5";
-        break;
-    case MATRIX_FROM:
-        i2c_device = "/dev/i2c-5";
-        break;
-    case DTMF_READ:
-        i2c_device = "/dev/i2c-5";
-        break;
-    default:
-        i2c_device = "/dev/i2c-4";
-    }
+        io_fd_rd = fd_bus1; }
+    else {
+        io_fd_rd = fd_bus0; }
 
 
-    if ((fd = open(i2c_device,O_RDWR)) < 0) {
-        printf("Error gpio.c Line 217: Failed to open I2C Bus ID: %d \n O_RDWR", id);
-        exit(1);
-    }
+        if (ioctl(io_fd_rd,I2C_SLAVE,device_addr) < 0) {
+            printf("Failed to set I2C Bus as slave ID: %d\n", id);
+            exit(1);
+        }
 
-    if (ioctl(fd,I2C_SLAVE,device_addr) < 0) {
-        printf("Error gpio.c Line 222: Failed to set I2C Bus as slave ID: %d\n", id);
-        exit(1);
-    }
+        wr_buf[0] = mcp_reg;
+
+        if (write(io_fd_rd,wr_buf,1) != 1) {
+            printf("Failed the address write of I2C read: %d \n", id);
+}
+
+        if (read(io_fd_rd,rd_buf,1) != 1) {
+            printf("Failed read data of I2C read: %d \n", id);
+
+        }
 
 
-
-    wr_buf[0] = mcp_reg;
-
-    if (write(fd,wr_buf,1) != 1)
-        printf("Error gpio.c Line 228: Failed to write from i2c bus ID: %d \n", id);
-
-
-    if (read(fd,rd_buf,1) != 1) {
-        printf("Error gpio.c Line 232: Failed to read i2c bus ID: %d \n", id);
-
-    } else {
-        register_data = rd_buf[0];
-    }
-
-    close(fd);
+    register_data = rd_buf[0];
 
     return register_data;
- //     pthread_mutex_unlock(&gpio_mutex_1);
+    //     pthread_mutex_unlock(&gpio_mutex_1);
 
 
 }
@@ -357,8 +315,8 @@ set_connections(uint8_t from, uint8_t to){
     uint8_t exch_lines_from[8] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
 
 
-    write_ctrl_register(MATRIX_FROM, MCP_OLAT, exch_lines_from[from]);
-    write_ctrl_register(MATRIX_TO, MCP_OLAT, exch_lines_to[to]);
+    write_ctrl_register(MATRIX_FROM, MCP_OLAT, exch_lines_from[from], 1131);
+    write_ctrl_register(MATRIX_TO, MCP_OLAT, exch_lines_to[to], 1132);
 
 }
 
@@ -369,8 +327,8 @@ set_ext_connect(uint8_t from){
     //FROM Line numbers are 0 to 7, since the detector outputs 0 to 7
     uint8_t exch_lines_from[8] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
     //Sets From Matrix
-    write_ctrl_register(MATRIX_FROM, MCP_OLAT, exch_lines_from[from]);
-   //Connect External Enable of TO Matrix
+    write_ctrl_register(MATRIX_FROM, MCP_OLAT, exch_lines_from[from], 1133);
+    //Connect External Enable of TO Matrix
     write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 1, 4057);
 
 }
@@ -490,7 +448,6 @@ int8_t wait_select(uint32_t sec, uint32_t usec, uint8_t gpio, bool timeout)
     else {
         retval = select(filepath+1, NULL, NULL, &fd, NULL);
     }
-    //close(filepath);
     FD_CLR(filepath, &fd);
 
     return retval;
@@ -543,21 +500,21 @@ int32_t gpio_read (uint32_t gpio)
 void
 ac_on (bool acon, uint8_t line_no){
     if (acon == true) {
-        write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(line_no));
-        write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(line_no));
+        write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(line_no), 1135);
+        write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(line_no), 1136);
     }
     else {
-        write_ctrl_register(PHONE_AC, MCP_OLAT, hex2notlines(line_no));
-        write_ctrl_register(PHONE_DC, MCP_OLAT, hex2lines(line_no));
+        write_ctrl_register(PHONE_AC, MCP_OLAT, hex2notlines(line_no), 1137);
+        write_ctrl_register(PHONE_DC, MCP_OLAT, hex2lines(line_no), 1138);
     }
 }
 
 void
 return_to_idle(){
-    write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00);
-    write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00);
-    write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00);
-    write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff);
+    write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00, 1139);
+    write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00, 1140);
+    write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00, 1141);
+    write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff,1142);
     write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 0, 3097);
     write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_FROM_ENABLE, 0, 4057);
     write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 0, 4057);
@@ -575,6 +532,18 @@ init_gpios(){
     uint8_t i;
     int8_t ret;
     uint8_t iac;
+
+    //Define gpio file descriptors
+    if ((fd_bus0 = open("/dev/i2c-4",O_RDWR)) < 0) {
+        printf("Failed to open I2C bus for i2c-4 BUS_0");
+        exit(1);
+    }
+    if ((fd_bus1 = open("/dev/i2c-5",O_RDWR)) < 0) {
+        printf("Failed to open I2C bus for i2c-5 BUS_1");
+        exit(1);
+    }
+
+
 
 
     //Initialize virtual base address for memory mapped I/O
@@ -632,26 +601,26 @@ init_gpios(){
          ****************************************************************/
 
     //Set Matrix Controllers to Output
-    write_ctrl_register(MATRIX_FROM, MCP_IODIR, 0x00);
-    write_ctrl_register(MATRIX_TO, MCP_IODIR, 0x00);
+    write_ctrl_register(MATRIX_FROM, MCP_IODIR, 0x00, 1151);
+    write_ctrl_register(MATRIX_TO, MCP_IODIR, 0x00, 1152);
     //Set Matrix Controllers all FETs to off (high active)
-    write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00);
-    write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00);
+    write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00, 1153);
+    write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00, 1154);
     //Set the AC/DC Registers to output
-    write_ctrl_register(PHONE_DC, MCP_IODIR, 0x00);
-    write_ctrl_register(PHONE_AC, MCP_IODIR, 0x00);
+    write_ctrl_register(PHONE_DC, MCP_IODIR, 0x00, 1155);
+    write_ctrl_register(PHONE_AC, MCP_IODIR, 0x00, 1156);
     //Set the AC/DC Registers to DC
-    write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff); // set to one
-    write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00); // set to zero
+    write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff, 1157); // set to one
+    write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00, 1158); // set to zero
     // Set the Connect control register to output and off
     // Disable External line Audio switches
-    write_ctrl_register(CONNECT_CTRL, MCP_IODIR, 0x00);
-    write_ctrl_register(CONNECT_CTRL, MCP_OLAT, 0x00);
+    write_ctrl_register(CONNECT_CTRL, MCP_IODIR, 0x00, 1159);
+    write_ctrl_register(CONNECT_CTRL, MCP_OLAT, 0x00, 1160);
     //DTMF_READ set 0-3 as read, 4-7 as write
-    write_ctrl_register(DTMF_READ, MCP_IODIR, 0x0f);
+    write_ctrl_register(DTMF_READ, MCP_IODIR, 0x0f, 1161);
     //Set the signal_a_en and signal_b_en FETs to off(high active)
-    write_ctrl_register(DTMF_READ, MCP_OLAT, 0x00);
-   //pwm off
+    write_ctrl_register(DTMF_READ, MCP_OLAT, 0x00, 1162);
+    //pwm off
     write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 3236);
 
 
@@ -660,18 +629,18 @@ init_gpios(){
     *****************************************************/
 
     //LOOP Detect are input registers
-    write_ctrl_register(LOOP_DETECT, MCP_IODIR, 0xff);
+    write_ctrl_register(LOOP_DETECT, MCP_IODIR, 0xff, 1171);
     // Polarity of the input signal
-    write_ctrl_register(LOOP_DETECT, MCP_IPOL, 0x00);
+    write_ctrl_register(LOOP_DETECT, MCP_IPOL, 0x00, 1172);
     //Enables interrupts
-    write_ctrl_register(LOOP_DETECT, MCP_GPINTEN, 0x00);
+    write_ctrl_register(LOOP_DETECT, MCP_GPINTEN, 0x00, 1173);
     //controlls rising or falling, not relevant since we
     //interrupt on both edges
-    write_ctrl_register(LOOP_DETECT, MCP_DEFVAL, 0x00);
-    write_ctrl_register(LOOP_DETECT, MCP_INTCON, 0x00);
+    write_ctrl_register(LOOP_DETECT, MCP_DEFVAL, 0x00, 1174);
+    write_ctrl_register(LOOP_DETECT, MCP_INTCON, 0x00, 1175);
     //Genearte Interrupt on rising and falling edge
-    write_ctrl_register(LOOP_DETECT, MCP_IOCON, 0x02);
-    write_ctrl_register(LOOP_DETECT, MCP_GPPU, 0x00);
+    write_ctrl_register(LOOP_DETECT, MCP_IOCON, 0x02, 1176);
+    write_ctrl_register(LOOP_DETECT, MCP_GPPU, 0x00, 1177);
 
 
 }

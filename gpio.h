@@ -97,7 +97,7 @@
 //Function declarations
 int mmap_virtual_base();
 uint8_t read_ctrl_register(uint8_t register_addr, uint8_t device_addr, uint32_t id);
-void write_ctrl_register(uint8_t device_addr, uint8_t register_addr, uint8_t register_data);
+void write_ctrl_register(uint8_t device_addr, uint8_t register_addr, uint8_t register_data, uint32_t id);
 void set_connections(uint8_t from, uint8_t to);
 uint8_t hex2lines(uint8_t hex);
 uint8_t hex2notlines(uint8_t hex);
