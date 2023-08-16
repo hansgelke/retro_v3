@@ -113,7 +113,7 @@ void set_ext_connect(uint8_t from);
 uint8_t line_requesting();
 void return_to_idle();
 
-
+bool debounce_flag;
 
 bool loop_detected ();
 

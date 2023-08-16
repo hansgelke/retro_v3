@@ -15,7 +15,7 @@ uint8_t fd_bus0;
 uint8_t fd_bus1;
 uint8_t io_fd_rd;
 uint8_t io_fd_wr;
-uint8_t fd;
+uint8_t io_bit_fd;
 
 pthread_mutex_t gpio_mutex_1 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t gpio_mutex_2 = PTHREAD_MUTEX_INITIALIZER;
@@ -364,46 +364,22 @@ write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value
     uint8_t cur_value = 0;
     uint8_t mask;
 
+    if ((device_addr == MATRIX_TO) | (device_addr == MATRIX_FROM) | (device_addr == DTMF_READ))  {
 
+        io_bit_fd = fd_bus1; }
+    else {
+        io_bit_fd = fd_bus0; }
 
-    char *i2c_device = "/dev/i2c-4";
-    //Set the i2c Bus 4 or 5 depending on the I2Cchip beeing written
-    //Only MATRIX_TO, MATRIX_FROM and DTMF_I2C devices are on I2c-5
-    // All the rest is in I2C-4
-
-
-
-    switch (device_addr)
-
-    {
-    case MATRIX_TO:
-        i2c_device = "/dev/i2c-5";
-        break;
-    case MATRIX_FROM:
-        i2c_device = "/dev/i2c-5";
-        break;
-    case DTMF_READ:
-        i2c_device = "/dev/i2c-5";
-        break;
-    default:
-        i2c_device = "/dev/i2c-4";
-    }
-
-    if ((fd = open(i2c_device,O_RDWR)) < 0) {
-        printf("Error gpio.c Line 335: Failed to open I2C Bus \n O_RDWR");
-        exit(1);
-    }
-
-    if (ioctl(fd,I2C_SLAVE,device_addr) < 0) {
+    if (ioctl(io_bit_fd,I2C_SLAVE,device_addr) < 0) {
         printf("Failed to acquire I2C bus access and/or talk to slave.\n");
         exit(1);
     }
 
     wr_buf[0] = mcp_reg;
-    if (write(fd,wr_buf,1) != 1)
+    if (write(io_bit_fd,wr_buf,1) != 1)
         printf("Failed to write to the i2c bus when wr_buf.\n");
 
-    if (read(fd,rd_buf,1) != 1) {
+    if (read(io_bit_fd,rd_buf,1) != 1) {
         /* ERROR HANDLING: i2c transaction failed */
         printf("Failed to read from the i2c bus ID:%d\n", id);
     } else {
@@ -418,10 +394,10 @@ write_mcp_bit(uint8_t device_addr, uint8_t mcp_reg , uint8_t bit_pos, char value
     }
     wr_buf[0] = mcp_reg; // Register Address
     wr_buf[1] = cur_value; //
-    if (write(fd,wr_buf,2) != 2)
+    if (write(io_bit_fd,wr_buf,2) != 2)
         printf("Failed to write to the mcp bit.\n");
 
-    close(fd);
+    //close(fd);
     pthread_mutex_unlock(&gpio_mutex_2);
 
 }
@@ -642,5 +618,7 @@ init_gpios(){
     write_ctrl_register(LOOP_DETECT, MCP_IOCON, 0x02, 1176);
     write_ctrl_register(LOOP_DETECT, MCP_GPPU, 0x00, 1177);
 
-
+    debounce_flag = false;
 }
+
+

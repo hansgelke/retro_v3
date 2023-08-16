@@ -14,10 +14,12 @@ pthread_mutex_t dtmf_mutex = PTHREAD_MUTEX_INITIALIZER;
 sem_t sem_dtmf;
 
 extern uint8_t number_dialed;
+uint32_t binary_lines;
 
 uint8_t first_num;
 uint8_t dialed_number;
 
+extern bool debounce_flag;
 
 ext_fsm_state_t next_state;
 ext_fsm_state_t ext_state = st_idle ;
@@ -26,6 +28,9 @@ uint32_t ring_timer = 0;
 uint8_t dial_status = 0;
 
 extern uint8_t mfv_buffer[32];
+
+uint32_t to_matrix;
+uint32_t from_matrix;
 
 
 void *tf_main_fsm()
@@ -65,8 +70,21 @@ void *tf_main_fsm()
 
 void ext_timer()
 {
-    if (gpio_read(RING_INDICATOR_N) == 0){
+    //An active signal on ring indicator sets the debounce flag after 20ms
+    if ((gpio_read(RING_INDICATOR_N) == 0) & (debounce_flag == false)  ){
+        usleep(20000);
+        debounce_flag = true;
+    }
+    // If ring indicator goes high while debounce flag is true, there was a glitch
+    // and debounce flag is cleared
+    else if ((gpio_read(RING_INDICATOR_N) == 1) & (debounce_flag == true)){
+        debounce_flag = false;
+    }
+    //if the debounce flag is still true, while the indicator is still active
+    // it is assumed that there is no glitch and MAX_RING is loaded
+    else if ((gpio_read(RING_INDICATOR_N) == 0) & (debounce_flag == true)){
         ring_timer = MAX_RING;
+        debounce_flag = false;
     }
     //count down delayed by usleep
     else if (ring_timer > 0) {
@@ -97,6 +115,7 @@ void main_fsm()
             write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 5071);
             ext_state = st_ext_ring;
         }
+        // Put Dail tone on requesting line
         else if (origin_number != 0xff) {
             melody = ger_dial ;
             sem_post(&sem_signal);
@@ -155,15 +174,15 @@ void main_fsm()
 
     case st_ext_accepted:
         //If loop is opened, hang up external line
-                if (line_requesting() == 0xff){
-        //            //If loop is opened, hang up external line
-        // >>>>>>>>>>  GO TO IDLE  >>>>>>>>>>>>>>>>>>>>
-              return_to_idle();
-              ext_state = st_idle;
-                }
-                else {
-              ext_state = st_ext_accepted;
-                }
+        if (line_requesting() == 0xff){
+            //            //If loop is opened, hang up external line
+            // >>>>>>>>>>  GO TO IDLE  >>>>>>>>>>>>>>>>>>>>
+            return_to_idle();
+            ext_state = st_idle;
+        }
+        else {
+            ext_state = st_ext_accepted;
+        }
         break;
 
         /******************************************************************************
@@ -206,12 +225,9 @@ void main_fsm()
                 // Connects the Matrix for the speach channel
                 set_ext_connect(origin_number);
 
-                //Connect the Tone Generator to the External Splitter
-                //Output DTMF Tone to Splitter_in through FROM Matrix
-                //write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3097);
-                //Set FROM Matrix to connect to EXT_IN Signal of Splitter
-                //write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_FROM_ENABLE, 1, 4057);
-                //Turn on Relay - temporary disabled
+                //The Tone Generator is connected directly to the EXT-output by the amplifier
+                // Enableing the Matrix is therefore not required
+                //Turn on Relay
                 write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 1, 4057);
 
 
@@ -370,7 +386,16 @@ void main_fsm()
             write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00, 1113);
             write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff, 1114);
 
+            //Clear Matrix
+            write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00, 1139);
+            write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00, 1140);
+            write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 0, 3097);
 
+            //Sets the connection matrix FROM TO
+            set_connections(origin_number, number_dialed);
+            from_matrix = read_ctrl_register(MATRIX_FROM,MCP_OLAT, 373);
+            to_matrix = read_ctrl_register(MATRIX_TO,MCP_OLAT, 374);
+            printf("FROM: '%x' TO: '%x' \n", from_matrix, to_matrix);
 
             ext_state = st_int_accepted;
 
