@@ -18,6 +18,7 @@ uint32_t binary_lines;
 
 uint8_t first_num;
 uint8_t dialed_number;
+uint8_t loop_bits;
 
 extern bool debounce_flag;
 
@@ -29,8 +30,7 @@ uint8_t dial_status = 0;
 
 extern uint8_t mfv_buffer[32];
 
-uint32_t to_matrix;
-uint32_t from_matrix;
+
 
 
 void *tf_main_fsm()
@@ -58,12 +58,7 @@ void *tf_main_fsm()
             if     (ext_state != next_state){
                 printf("State changed: '%x' Origin: '%x' \n", ext_state, origin_number);
             };
-
-
-
-
         }
-
     }
 }
 
@@ -110,9 +105,11 @@ void main_fsm()
         //>>>>> GOTO st_ext_ring
         if (ring_timer > 0){
             melody = gb_ring;
-            ac_on(true,1);
+            //On external call, let all phones ring at once
             sem_post(&sem_signal);
             write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 5071);
+            ac_on(9);
+
             ext_state = st_ext_ring;
         }
         // Put Dail tone on requesting line
@@ -145,13 +142,24 @@ void main_fsm()
         if (mmap_gpio_test(PICK_UP_N) == true){
             //>>>>>>>> Go TO ACCEPTED  >>>>>>
 
+            //Turn thyristors for AC off first
+            ac_off(9);
+            // Wait for signals to settle
+            usleep(20000);
+            // Turn off the AC generator
             sem_init(&sem_signal,0,0);
             write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 5071);
+            //Pick up external line
             write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 1, 4057);
-            ac_on(false,1);
+            //Switch all phones to DC
+            //expire ring timer
             ring_timer = 0;
-            set_ext_connect(0);
-
+            //Connect to devic which lifted receiver
+            usleep(10000);
+            loop_bits = read_ctrl_register(LOOP_DETECT,MCP_GPIO, 373);
+            origin_number = line_requesting();
+            set_ext_connect(origin_number);
+            connection_check();
             ext_state = st_ext_accepted;
         }
         else if (ring_timer == 0){
@@ -194,14 +202,14 @@ void main_fsm()
         pthread_cond_wait(&cond_dialcomplete, &dial_mutex);
         pthread_mutex_unlock(&dial_mutex);
 
-        first_num = number_dialed;
+        //first_num = number_dialed;
 
         //Evaluate return Message from rotary encoder
         switch (dial_status) {
         case stat_dial_complete:
 
             //REQUESTING PHONE IS DIALING OPERATOR TO GET OUTSIDE LINE
-            if(first_num == 10){
+            if(number_dialed == 10){
                 //Clear the Dial Buffer Indexes
                 dtmf_rd_idx = 0;
                 dtmf_wr_idx = 0;
@@ -224,6 +232,7 @@ void main_fsm()
 
                 // Connects the Matrix for the speach channel
                 set_ext_connect(origin_number);
+                connection_check();
 
                 //The Tone Generator is connected directly to the EXT-output by the amplifier
                 // Enableing the Matrix is therefore not required
@@ -276,12 +285,12 @@ void main_fsm()
         pthread_cond_wait(&cond_dialcomplete, &dial_mutex);
         pthread_mutex_unlock(&dial_mutex);
 
-        dialed_number = number_dialed;
+        //dialed_number = number_dialed;
         //>>>>> GOTO st_int_ring
         melody = gb_ring;
-        ac_on(true,dialed_number);
         sem_post(&sem_signal);
         write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 5071);
+        ac_on(number_dialed);
         ext_state = st_int_ring;
 
         break;
@@ -380,11 +389,12 @@ void main_fsm()
         origin_number = line_requesting();
         if (mmap_gpio_test(PICK_UP_N) == true){
             //>>>> GOTO st_int_accepted
+            //Turn of AC Ringing Thyristors for all phones
+            ac_off(9);
+            //Wait for Signal to thyristor to settle
+              usleep(20000);
             sem_init(&sem_signal,0,0);
             write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 5071);
-            //Turn all lines back to DC mode
-            write_ctrl_register(PHONE_AC, MCP_OLAT, 0x00, 1113);
-            write_ctrl_register(PHONE_DC, MCP_OLAT, 0xff, 1114);
 
             //Clear Matrix
             write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00, 1139);
@@ -392,11 +402,9 @@ void main_fsm()
             write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 0, 3097);
 
             //Sets the connection matrix FROM TO
+            //Print settings to screen for debug
             set_connections(origin_number, number_dialed);
-            from_matrix = read_ctrl_register(MATRIX_FROM,MCP_OLAT, 373);
-            to_matrix = read_ctrl_register(MATRIX_TO,MCP_OLAT, 374);
-            printf("FROM: '%x' TO: '%x' \n", from_matrix, to_matrix);
-
+            connection_check();
             ext_state = st_int_accepted;
 
         }
@@ -445,6 +453,10 @@ void main_fsm()
     }
 
 }
+
+//ac_on = read_ctrl_register(PHONE_AC,MCP_OLAT, 373);
+//dc_on = read_ctrl_register(PHONE_DC,MCP_OLAT, 374);
+//printf("AC: '%x' DC: '%x' \n", ac_on, dc_on);
 
 
 

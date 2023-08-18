@@ -37,7 +37,6 @@ test_menue()
     uint32_t pwm0_fif1_reg = 0;
     uint32_t pwm0_rng2_reg = 0;
     uint32_t pwm0_dat2_reg = 0;
-    uint8_t iac = 1;
     uint32_t value;
 
 
@@ -255,14 +254,12 @@ test_menue()
         }
         sscanf(&line[0], "%x", &a_arg1);
         melody = gb_ring;
-        ac_on(true,a_arg1);
+        ac_on(a_arg1);
         sem_post(&sem_signal);
     }
 
     else if (strcmp(line, "gbrings\n") == 0){
-        for (iac=1; iac<=8; iac++){
-            ac_on(false,iac);
-        }
+            ac_off(9);
         write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 3243);
         sem_init(&sem_signal,0,0);
 

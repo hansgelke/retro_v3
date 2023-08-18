@@ -22,6 +22,17 @@ pthread_mutex_t gpio_mutex_2 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t gpio_mutex_3 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t gpio_mutex_4 = PTHREAD_MUTEX_INITIALIZER;
 
+uint32_t to_matrix;
+uint32_t from_matrix;
+uint8_t ext_on;
+uint8_t signals;
+
+bool sig_a_from;
+bool sig_b_from;
+bool sig_a_to;
+bool sig_b_to;
+
+
 
 
 /****************************************************************
@@ -338,7 +349,7 @@ uint8_t
 hex2lines(uint8_t hex){
     //Converts a hex number from the arguments to a single bit
     //Define Array
-    uint8_t exch_lines[9] = {0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80};
+    uint8_t exch_lines[10] = {0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0xff};
     uint8_t lines =exch_lines[hex];
 
     return lines;
@@ -347,7 +358,7 @@ uint8_t
 hex2notlines(uint8_t hex){
     //Converts a hex number from the arguments to a single bit
     //Returns low active bits
-    uint8_t exch_lines[9] = {0xff, 0xfe, 0xfd, 0xfb, 0xf7, 0xef, 0xdf, 0xbf, 0x7f};
+    uint8_t exch_lines[10] = {0xff, 0xfe, 0xfd, 0xfb, 0xf7, 0xef, 0xdf, 0xbf, 0x7f, 0x00};
     uint8_t lines =exch_lines[hex];
 
     return lines;
@@ -474,15 +485,15 @@ int32_t gpio_read (uint32_t gpio)
 }
 
 void
-ac_on (bool acon, uint8_t line_no){
-    if (acon == true) {
+ac_on (uint8_t line_no){
         write_ctrl_register(PHONE_AC, MCP_OLAT, hex2lines(line_no), 1135);
         write_ctrl_register(PHONE_DC, MCP_OLAT, hex2notlines(line_no), 1136);
-    }
-    else {
+}
+
+void
+ac_off (uint8_t line_no){
         write_ctrl_register(PHONE_AC, MCP_OLAT, hex2notlines(line_no), 1137);
         write_ctrl_register(PHONE_DC, MCP_OLAT, hex2lines(line_no), 1138);
-    }
 }
 
 void
@@ -495,6 +506,28 @@ return_to_idle(){
     write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_FROM_ENABLE, 0, 4057);
     write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 0, 4057);
     write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 0, 4057);
+}
+void
+connection_check(){
+    from_matrix = read_ctrl_register(MATRIX_FROM,MCP_OLAT, 373);
+    to_matrix = read_ctrl_register(MATRIX_TO,MCP_OLAT, 374);
+    ext_on = read_ctrl_register(CONNECT_CTRL,MCP_OLAT, 374);
+    signals = read_ctrl_register(DTMF_READ,MCP_OLAT, 374);
+    sig_a_from = (signals & SIGNAL_A_FROM_BIT);
+    sig_b_from = (signals & SIGNAL_B_FROM_BIT);
+    sig_a_to = (signals & SIGNAL_A_TO_BIT);
+    sig_b_to = (signals & SIGNAL_B_TO_BIT);
+
+    if (ext_on & EXT_FROM_BIT){
+        printf("External-from FROM: '%x' TO: '%x'\n", from_matrix, to_matrix);
+    }
+    if (ext_on & EXT_TO_BIT){
+            printf("External-to FROM: '%x' TO: '%x'\n", from_matrix, to_matrix);
+    }
+    else {
+        printf("Internal FROM: '%x' TO: '%x' \n", from_matrix, to_matrix);
+    }
+    printf("SIGNAL_B_FROM:'%d' SIGNAL_B_TO:'%d' SIGNAL_A_FROM:'%d' SIGNAL_A_TO:'%d' \n", sig_b_from, sig_b_to, sig_a_from, sig_a_to);
 }
 
 /****************************************************************
@@ -568,10 +601,8 @@ init_gpios(){
         }
     }
     //Set all lines to DC
+        ac_off(9);
 
-    for (iac=1; iac<=8; iac++){
-        ac_on(false,iac);
-    }
     /****************************************************************
          * Initialize MCP I2C Controller Pins
          ****************************************************************/

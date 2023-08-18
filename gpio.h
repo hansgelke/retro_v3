@@ -84,6 +84,8 @@
 #define DTMF_READ (0x26) // Bus1
 
 //Single Bits of I2C
+#define EXT_TO_BIT (0x10) // EXT_ON bit in connect_ctrl
+#define EXT_FROM_BIT (0x20) // EXT_ON bit in connect_ctrl
 #define RINGER_ENABLE (0x02) // Turn Bridge on
 #define EXT_LINE_RELAY (0x03) // Assert Relay for external line
 #define EXT_TO_ENABLE (0x04) // Turn on To line
@@ -91,6 +93,11 @@
 
 #define SIGNAL_B_FROM (0x5)//Codec Output Signals
 #define SIGNAL_B_TO (0x7)//Codec Output Signals
+
+#define SIGNAL_A_FROM_BIT (0x10)//Codec Output Signals
+#define SIGNAL_A_TO_BIT (0x40)//Codec Output Signals
+#define SIGNAL_B_FROM_BIT (0x20)//Codec Output Signals
+#define SIGNAL_B_TO_BIT (0x80)//Codec Output Signals
 
 
 
@@ -108,7 +115,10 @@ uint32_t mmap_lvl_read(void);
 void mmap_gpio_set( uint8_t gpio, uint8_t value);
 int32_t gpio_read (uint32_t gpio);
 bool mmap_gpio_test(uint8_t gpio);
-void ac_on (bool acon, uint8_t line_no);
+void ac_on (uint8_t line_no);
+void ac_off (uint8_t line_no);
+void connection_check();
+
 void set_ext_connect(uint8_t from);
 uint8_t line_requesting();
 void return_to_idle();
