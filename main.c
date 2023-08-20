@@ -31,6 +31,7 @@
 #include "tones.h"
 #include "signals.h"
 #include "dial.h"
+#include "dtmf.h"
 #include "extern.h"
 #include "menue.h"
 
@@ -65,11 +66,12 @@ int main(void) {
      *************** Initialize Tasks ***************************
      ************************************************************/
 
-    pthread_t t_pwm, t_tone_gen, t_generate_signals, t_rotary, t_main_fsm, t_play_dtmf;
+    pthread_t t_pwm, t_tone_gen, t_generate_signals, t_rotary, t_dtmf, t_main_fsm, t_play_dtmf;
     uint8_t iret1;
 
     iret1 = pthread_create(&t_pwm, NULL, &tf_pwm, NULL);
     iret1 = pthread_create(&t_rotary, NULL, &tf_rotary, NULL);
+    iret1 = pthread_create(&t_dtmf, NULL, &tf_dtmf, NULL);
     iret1 = pthread_create(&t_main_fsm, NULL, &tf_main_fsm, NULL);
     iret1 = pthread_create(&t_tone_gen, NULL, &tf_tone_gen, NULL);
     iret1 = pthread_create(&t_generate_signals, NULL, &tf_generate_signals, NULL);
@@ -79,6 +81,7 @@ int main(void) {
 
     pthread_join(t_pwm, NULL);
     pthread_join(t_rotary, NULL);
+    pthread_join(t_dtmf, NULL);
     pthread_join(t_main_fsm, NULL);
     pthread_join(t_tone_gen, NULL);
     pthread_join(t_generate_signals, NULL);

@@ -590,10 +590,11 @@ init_gpios(){
     gpio_err_msg[18] = set_edge_both(LOOP_CLOSED_N_7);
     gpio_err_msg[19] = set_edge_both(LOOP_CLOSED_N_8);
     //gpio_err_msg[20] = set_edge_rising(DC_LOOP_INT);
+    gpio_err_msg[20] = set_edge_rising(DTMF_INT);
 
 
 
-    for (i =0; i < 20; i++)
+    for (i =0; i <= 20; i++)
     {
         if (gpio_err_msg[i] < 0) {
             printf("ERROR: Failed to initialize File GPIO as In or out: %d", i);

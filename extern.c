@@ -4,9 +4,13 @@
 #include "gpio.h"
 #include "signals.h"
 #include "dial.h"
+#include "dtmf.h"
+
 
 pthread_mutex_t dial_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond_dial = PTHREAD_COND_INITIALIZER;
+pthread_cond_t cond_dtmf_dial = PTHREAD_COND_INITIALIZER;
+
 pthread_cond_t cond_dialcomplete = PTHREAD_COND_INITIALIZER;
 
 pthread_mutex_t dtmf_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -123,6 +127,9 @@ void main_fsm()
             //Arm rotary dial receiver
             pthread_mutex_lock(&dial_mutex);
             pthread_cond_signal(&cond_dial);
+            pthread_cond_signal(&cond_dtmf_dial);
+
+
             pthread_mutex_unlock(&dial_mutex);
 
             ext_state = st_offhook;
@@ -252,7 +259,10 @@ void main_fsm()
 
                 pthread_mutex_lock(&dial_mutex);
                 pthread_cond_signal(&cond_dial);
-                pthread_mutex_unlock(&dial_mutex);
+                pthread_cond_signal(&cond_dtmf_dial);
+
+                pthread_cond_signal(&cond_dtmf_dial);
+                                pthread_mutex_unlock(&dial_mutex);
                 ext_state = st_second_number;
 
 
@@ -303,6 +313,7 @@ void main_fsm()
         //Arm rotary dial receiver
         pthread_mutex_lock(&dial_mutex);
         pthread_cond_signal(&cond_dial);
+      pthread_cond_signal(&cond_dtmf_dial);
         pthread_mutex_unlock(&dial_mutex);
 
         //Wait for dial complete

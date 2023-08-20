@@ -35,8 +35,8 @@ void *tf_rotary()
         /************************************************************************
         *                    ROTARY IDLE
         ***********************************************************************/
-        //Wait until a DC_LOOP_INT occured (rising edgeof MCP Interrupt line)
-        // A timeout means the user blocks by leaving receiver of hook(not yet implemented)
+        //Use wait_select until a DC_LOOP_INT occured (rising edgeof MCP Interrupt line)
+        // A timeout means the user blocks by leaving receiver of hook more than 30s
         // loop_int > 0 load first pulse into number_dialed_accum then go to hangup
         // In hangup it is checked, if another pulse comes
         case st_rotary_idle:
