@@ -123,6 +123,7 @@ void main_fsm()
             //set matrix to output dial tone
             write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3097);
             write_mcp_bit(MATRIX_FROM, MCP_OLAT, origin_number, 1, 3098);
+            connection_check();
 
             //Arm rotary dial receiver
             pthread_mutex_lock(&dial_mutex);
@@ -213,7 +214,8 @@ void main_fsm()
 
         //Evaluate return Message from rotary encoder
         switch (dial_status) {
-        case stat_dial_complete:
+        //Rotary decoder detected, a rotary phone is connected
+        case stat_compl_rotary:
 
             //REQUESTING PHONE IS DIALING OPERATOR TO GET OUTSIDE LINE
             if(number_dialed == 10){
@@ -249,7 +251,10 @@ void main_fsm()
 
                 //The write pointer for the DTMF signals is set to 0 when outside_line is entered
                 dtmf_wr_idx = 0;
-                ext_state = st_outsideline;
+                dtmf_rd_idx = 0;
+
+                    ext_state = st_outsideline_rotary;
+
             }
             else {
                 //>>>>GOTO st_second_number
@@ -262,12 +267,64 @@ void main_fsm()
                 pthread_cond_signal(&cond_dtmf_dial);
 
                 pthread_cond_signal(&cond_dtmf_dial);
-                                pthread_mutex_unlock(&dial_mutex);
+                pthread_mutex_unlock(&dial_mutex);
                 ext_state = st_second_number;
 
 
             }
             break;
+
+        case stat_compl_dtmf:
+
+            //REQUESTING PHONE IS DIALING OPERATOR TO GET OUTSIDE LINE
+            if(number_dialed == 10){
+
+                // after dialing 0, no "ready tone" should be audible
+                sem_init(&sem_signal,0,0);
+                {gst_element_set_state (tone_pipeline, GST_STATE_NULL);
+                }
+
+
+                // Clear the connection Matrix
+                write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00, 1111);
+                write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00, 1112);
+                write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_TO, 0, 3097);
+                write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 0, 3097);
+                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 0, 4057);
+                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_FROM_ENABLE, 0, 4057);
+
+
+                // Connects the Matrix for the speach channel
+                set_ext_connect(origin_number);
+                connection_check();
+
+                //Turn on Relay
+                write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 1, 4057);
+
+
+                    ext_state = st_outsideline_dtmf;
+
+            }
+            else {
+                //>>>>GOTO st_second_number
+                //Turn Tones off
+
+                sem_init(&sem_signal,0,0);
+
+                pthread_mutex_lock(&dial_mutex);
+                pthread_cond_signal(&cond_dial);
+                pthread_cond_signal(&cond_dtmf_dial);
+
+                pthread_cond_signal(&cond_dtmf_dial);
+                pthread_mutex_unlock(&dial_mutex);
+                ext_state = st_second_number;
+
+
+            }
+            break;
+
+
+
 
         case stat_nodial:
             return_to_idle();
@@ -305,10 +362,10 @@ void main_fsm()
 
         break;
         /******************************************************************************
-            *                       State OUTSIDE LINE
+            *                       State OUTSIDE LINE Rotary
            ******************************************************************************/
 
-    case st_outsideline:
+    case st_outsideline_rotary:
 
         //Arm rotary dial receiver
         pthread_mutex_lock(&dial_mutex);
@@ -323,7 +380,7 @@ void main_fsm()
 
         switch (dial_status) {
         //Normal completion of dial
-        case stat_dial_complete:
+        case stat_compl_rotary:
             dialed_number = number_dialed;
             //Ready for the next number
 
@@ -339,14 +396,14 @@ void main_fsm()
             pthread_mutex_unlock(&dtmf_mutex);
 
 
-            ext_state = st_outsideline;
+            ext_state = st_outsideline_rotary;
             break;
 
         case stat_nodial:
             //User waits more than 30s to dial
             //Here no Error, FSM stays in same state
 
-            ext_state = st_outsideline;
+            ext_state = st_outsideline_rotary;
 
             break;
 
@@ -375,7 +432,29 @@ void main_fsm()
             ext_state = st_idle;
         }
         else {
-            ext_state = st_outsideline;
+            ext_state = st_outsideline_rotary;
+
+        }
+
+        break;
+        /******************************************************************************
+            *                       State OUTSIDE LINE DTMF
+           ******************************************************************************/
+
+    case st_outsideline_dtmf:
+//If the terminal is dtmf, no rotary to dtmf conversion needs to be done
+// Wait only until the receiver is hang up
+        //if phone is hang up go to idle
+        if (line_requesting() == 0xff){
+            //>>>>>>>>>>  GO TO st_idle  >>>>>>>>>>>>>>>>>>>>
+            //clear all connections
+            return_to_idle();
+
+
+            ext_state = st_idle;
+        }
+        else {
+            ext_state = st_outsideline_dtmf;
 
         }
 

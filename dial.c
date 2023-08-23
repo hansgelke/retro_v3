@@ -130,7 +130,7 @@ void *tf_rotary()
                 //(Loop open) is following the status information dial_complete is send
 
                 number_dialed = number_dialed_accum;
-                dial_status = stat_dial_complete;
+                dial_status = stat_compl_rotary;
                 //Signal main FSM that the number is complete now
                 pthread_cond_signal(&cond_dialcomplete);
 

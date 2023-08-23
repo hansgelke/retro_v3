@@ -25,7 +25,9 @@
 #define stat_nodial (0x02)
 #define stat_hangup (0x03)
 #define stat_open (0x04)
-#define stat_dial_complete (0x05)
+#define stat_compl_rotary (0x05)
+#define stat_compl_dtmf (0x06)
+
 
 uint8_t number_dialed;
 uint8_t number_dialed_accum;

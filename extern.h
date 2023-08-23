@@ -24,18 +24,19 @@ uint8_t dtmf_wr_idx;
 
 
 typedef enum {
-    st_idle,
+    st_idle,//(0)
     st_ext_ring, // (1)External call comes in
     st_ext_accepted, //(2)local lifted receiver
     st_offhook, //(3)initiator lifted receiver to dial
-    st_noerror,
+    st_noerror,//(4)
     st_second_number,//(5) wait for second number
-    st_outsideline,//(6) a zero was dialed to get outside line
-    st_no_dial,
-    st_hang_up,
-    st_int_ring, // (9) Internal ring
-    st_int_accepted, // (10) An inernal connection was accepted
-    st_debounce //(11)
+    st_outsideline_rotary,//(6) get outside line for rotary phone
+    st_outsideline_dtmf,//(7) get outside line for dtmf phone
+    st_no_dial,//(8)
+    st_hang_up,//(9)
+    st_int_ring, // (10) Internal ring
+    st_int_accepted, // (11) An inernal connection was accepted
+    st_debounce //(12)
 } ext_fsm_state_t;
 
 

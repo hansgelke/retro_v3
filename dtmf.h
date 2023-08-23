@@ -21,11 +21,11 @@
 
 
 
-#define stat_extline (0x01)
-#define stat_nodial (0x02)
-#define stat_hangup (0x03)
-#define stat_open (0x04)
-#define stat_dial_complete (0x05)
+//#define stat_extline (0x01)
+//#define stat_nodial (0x02)
+//#define stat_hangup (0x03)
+//#define stat_open (0x04)
+//#define stat_dial_complete (0x05)
 
 uint8_t number_dialed;
 uint8_t line_pointer;

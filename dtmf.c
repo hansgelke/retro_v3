@@ -1,4 +1,5 @@
 #include "dtmf.h"
+#include "dial.h"
 #include "gpio.h"
 #include "extern.h"
 
@@ -52,7 +53,7 @@ void *tf_dtmf()
             if (loop_interrupt > 0) {
                 // Normal detection of interrupt (only LSB 4 bits)
                 number_dialed = (0xf) & read_ctrl_register(DTMF_READ,MCP_GPIO, 5555);
-                dial_status = stat_dial_complete;
+                dial_status = stat_compl_dtmf;
                 pthread_cond_signal(&cond_dialcomplete);
             }
             //if the receiver is lifted without dialing for 30s an Alarm is generated
