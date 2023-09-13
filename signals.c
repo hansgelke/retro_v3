@@ -33,8 +33,8 @@ void *tf_generate_signals()
         sem_wait(&sem_signal);
         sem_post(&sem_signal);//Post for next cycle
 
-        g_object_set (G_OBJECT (tone_src1), "volume", 0.4, NULL);
-        g_object_set (G_OBJECT (tone_src2), "volume", 0.4, NULL);
+        g_object_set (G_OBJECT (tone_src1), "volume", 1.0, NULL);
+        g_object_set (G_OBJECT (tone_src2), "volume", 1.0, NULL);
         g_object_set (G_OBJECT (tone_src1), "wave", 0, NULL);
         g_object_set (G_OBJECT (tone_src2), "wave", 0, NULL);
         //set note_idx to 0 and read out parameters for index

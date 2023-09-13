@@ -519,13 +519,13 @@ connection_check(){
     sig_b_to = (signals & SIGNAL_B_TO_BIT);
 
     if (ext_on & EXT_FROM_BIT){
-        printf("External-from FROM: '%x' TO: '%x'\n", from_matrix, to_matrix);
+        printf("\n External-FROM from: '%x' to: '%x'\n", from_matrix, to_matrix);
     }
-    if (ext_on & EXT_TO_BIT){
-            printf("External-to FROM: '%x' TO: '%x'\n", from_matrix, to_matrix);
+    else if (ext_on & EXT_TO_BIT){
+            printf("\n External-TO from: '%x' to: '%x'\n", from_matrix, to_matrix);
     }
     else {
-        printf("Internal FROM: '%x' TO: '%x' \n", from_matrix, to_matrix);
+        printf("\n Internal from: '%x' to: '%x' \n", from_matrix, to_matrix);
     }
     printf("SIGNAL_B_FROM:'%d' SIGNAL_B_TO:'%d' SIGNAL_A_FROM:'%d' SIGNAL_A_TO:'%d' \n", sig_b_from, sig_b_to, sig_a_from, sig_a_to);
 }

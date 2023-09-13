@@ -51,7 +51,11 @@ test_menue()
     printf("pwmoff - Turn PWM off\n");
     printf("exton - Connects to Edxternal line\n");
     printf("extoff - Disconnects external line\n");
-    printf("sinus - Generate Sinus Signal and send to a phone\n");
+    printf("sinus_int - Generate Sinus Signal for damping line 0-7 input\n");
+    printf("sinus_ext - Generate Sinus Signal to test external damping\n");
+    printf("sinus_mat - Generate Sinus Signal for damping line 0-7 input\n");
+    printf("sinus_off - Generate Sinus Signal for damping line 0-7 input\n");
+
     printf("gbring - Generate GB ring signal and send to phone\n");
     printf("gbrings - Turn off ringing\n");
     printf("run - Run Application\n");
@@ -228,7 +232,7 @@ test_menue()
 
     }
 
-    else if (strcmp(line, "sinus\n") == 0){
+    else if (strcmp(line, "sinus_int\n") == 0){
         printf("Send Tone to Lines (0-7):");
         fgets(line,100,stdin);
         if (strcmp(line, "x\n") == 0){
@@ -239,11 +243,60 @@ test_menue()
 
         melody = ger_dial;
         sem_post(&sem_signal);
-        write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3221);
-        //write_ctrl_register(MATRIX_FROM, MCP_OLAT, hex2lines(a_arg1));
         //turn off all FETs before turning on specific channel
         write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00, 1125);
+
+        //connect signal source to matrix
+        write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3221);
+
+       //write_ctrl_register(MATRIX_FROM, MCP_OLAT, hex2lines(a_arg1));
         write_mcp_bit(MATRIX_FROM, MCP_OLAT, a_arg1, 1, 3221);
+        connection_check();
+
+    }
+
+    else if (strcmp(line, "sinus_ext\n") == 0){
+        printf("Send Tone to Ext line input:");
+
+        melody = ger_dial;
+        sem_post(&sem_signal);
+        //turn off all FETs before turning on specific channel
+        write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00, 1125);
+        write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00, 1125);
+        // Attach Signal Generator to Matrix
+        write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3221);
+        //Connect Signal to input of external splitter
+        write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_FROM_ENABLE, 1, 4057);
+        usleep(20000);
+        connection_check();
+
+
+    }
+
+    else if (strcmp(line, "sinus_mat\n") == 0){
+        printf("Send Tone to Matrix:");
+
+        melody = ger_dial;
+        sem_post(&sem_signal);
+
+        // Attach Signal Generator to Matrix
+        write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3221);
+        connection_check();
+
+
+    }
+
+    else if (strcmp(line, "sinus_off\n") == 0){
+        printf("Send Tone to Matrix:");
+
+        melody = ger_dial;
+        sem_post(&sem_signal);
+
+        // Attach Signal Generator to Matrix
+        write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 0, 3221);
+        connection_check();
+
+
     }
 
     else if (strcmp(line, "gbring\n") == 0){

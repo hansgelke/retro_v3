@@ -121,6 +121,8 @@ void main_fsm()
             melody = ger_dial ;
             sem_post(&sem_signal);
             //set matrix to output dial tone
+            write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00, 1111);
+            write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00, 1112);
             write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 1, 3097);
             write_mcp_bit(MATRIX_FROM, MCP_OLAT, origin_number, 1, 3098);
             connection_check();
@@ -240,7 +242,12 @@ void main_fsm()
 
 
                 // Connects the Matrix for the speach channel
+                origin_number = line_requesting();
                 set_ext_connect(origin_number);
+                //Allow DTMF Signaling
+                //write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_TO, 1, 3097);
+                //write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 1, 4057);
+
                 connection_check();
 
                 //The Tone Generator is connected directly to the EXT-output by the amplifier
@@ -264,8 +271,6 @@ void main_fsm()
 
                 pthread_mutex_lock(&dial_mutex);
                 pthread_cond_signal(&cond_dial);
-                pthread_cond_signal(&cond_dtmf_dial);
-
                 pthread_cond_signal(&cond_dtmf_dial);
                 pthread_mutex_unlock(&dial_mutex);
                 ext_state = st_second_number;
@@ -378,6 +383,7 @@ void main_fsm()
         pthread_cond_wait(&cond_dialcomplete, &dial_mutex);
         pthread_mutex_unlock(&dial_mutex);
 
+
         switch (dial_status) {
         //Normal completion of dial
         case stat_compl_rotary:
@@ -403,6 +409,7 @@ void main_fsm()
             //User waits more than 30s to dial
             //Here no Error, FSM stays in same state
 
+
             ext_state = st_outsideline_rotary;
 
             break;
@@ -411,6 +418,8 @@ void main_fsm()
             //User hung up instead of dialing
             // Turn off  relay, open all connections
             return_to_idle();
+            //Remove DTMF before leaving rotary state
+            write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_TO, 0, 3097);
             ext_state = st_idle;
 
             break;
@@ -428,7 +437,8 @@ void main_fsm()
             //clear all connections
             return_to_idle();
 
-
+            //Remove DTMF before leaving rotary state
+            write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_TO, 0, 3097);
             ext_state = st_idle;
         }
         else {

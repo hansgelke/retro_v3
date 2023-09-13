@@ -53,10 +53,10 @@ static note_t gb_dial[] = {
     /*	     durat     freq_1 freq_2  tone_on ringer_on skip  */
     {  400000,    450.0,   350.0,    true,   false,   true},
 };
-
+//German tone is 425Hz but gst not precise, therefore set to 415Hz
 static note_t ger_dial[] = {
     /*	     durat     freq_1 freq_2  tone_on ringer_on skip  */
-    {  400000,    0.0,   425.0,    true,   false,   true},
+    {  400000,    0.0,   415.0,    true,   false,   true},
 };
 
 static note_t us_dial[] = {

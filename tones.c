@@ -7,18 +7,24 @@
 #include "tones.h"
 #include "main.h"
 #include "extern.h"
+#include "gpio.h"
 
 gfloat freq_low;
 gfloat freq_high;
 
 uint8_t mfv_buffer[32];
-
-//static gdouble dtmf_freq_low[11] = {918.0, 680.0, 680.0, 680.0, 752.0, 752.0, 752.0, 831.0, 831.0, 831.0, 918.0};
-//static gdouble dtmf_freq_high[11] = {1304.0, 1180.0, 1304.0, 1441.0, 1180.0, 1304.0, 1441.0, 1180.0, 1304.0, 1441.0, 1304.0};
+//Outputs correct tones
+static gdouble dtmf_freq_low[11] = {918.0, 680.0, 680.0, 680.0, 752.0, 752.0, 752.0, 831.0, 831.0, 831.0, 918.0};
+static gdouble dtmf_freq_high[11] = {1304.0, 1180.0, 1304.0, 1441.0, 1180.0, 1304.0, 1441.0, 1180.0, 1304.0, 1441.0, 1304.0};
 
 //Temporary to test on Fritzbox
-static gdouble dtmf_freq_low[11] = {918.0, 680.0, 680.0, 680.0, 752.0, 752.0, 752.0, 831.0, 831.0, 918.0, 918.0};
-static gdouble dtmf_freq_high[11] = {1304.0, 1180.0, 1304.0, 1441.0, 1180.0, 1304.0, 1441.0, 1180.0, 1304.0, 1180.0, 1304.0};
+//static gdouble dtmf_freq_low[11] = {918.0, 680.0, 680.0, 680.0, 752.0, 752.0, 752.0, 831.0, 831.0, 918.0, 918.0};
+//static gdouble dtmf_freq_high[11] = {1304.0, 1180.0, 1304.0, 1441.0, 1180.0, 1304.0, 1441.0, 1180.0, 1304.0, 1180.0, 1304.0};
+
+
+//Otriginal Frequencies 9=*
+//static gdouble dtmf_freq_low[11] = {941.0, 697.0, 697.0, 697.0, 770.0, 770.0, 770.0, 852.0, 852.0, 941.0, 941.0};
+//static gdouble dtmf_freq_high[11] = {1336.0, 1209.0, 1336.0, 1477.0, 1209.0, 1336.0, 1477.0, 1209.0, 1336.0, 1209.0, 1336.0};
 
 
 
@@ -28,8 +34,8 @@ static gdouble dtmf_freq_high[11] = {1304.0, 1180.0, 1304.0, 1441.0, 1180.0, 130
 void *tf_tone_gen()
 {
     struct sched_param para_tone;
-    para_tone.sched_priority = 40;
-    sched_setscheduler(0,SCHED_RR, &para_tone);
+    para_tone.sched_priority = 50;
+    sched_setscheduler(0,SCHED_FIFO, &para_tone);
     gst_init(NULL,NULL);
 
     //wait for dial.c to send condition and parameters
@@ -120,9 +126,9 @@ void *tf_tone_gen()
         fprintf (stderr, "pads could not be linked\n");
         exit (1);
     }
-       /******************************************/
-       /* PLAY TONES PIPELINE */
-      /******************************************/
+    /******************************************/
+    /* PLAY TONES PIPELINE */
+    /******************************************/
 
 
     /* we need to run a GLib main loop to get the messages */
@@ -151,6 +157,8 @@ void *tf_tone_gen()
 
 //loops and waits for a semaphore. If there is a semaphore it calls a function to play a dtmf tone
 
+
+
 void
 *tf_play_dtmf()
 
@@ -162,25 +170,49 @@ void
     {
 
         sem_wait(&sem_dtmf); //wait for semaphore
+        //Make audio connections to output the DTMF Tones
+        //Firts clear the Matrix
+        write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00, 1111);
+        write_ctrl_register(MATRIX_TO, MCP_OLAT, 0x00, 1112);
+        //Turn on connection DTMF played, Turn off Signal_B DTMF source
 
-//play dtmf tone
+        write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_TO, 1, 3097);
+        write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_A_TO, 0, 3097);
+        write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_A_FROM, 0, 3097);
+        write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_FROM, 0, 3097);
+
+        write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 1, 4057);
+        connection_check();
 
 
-        g_object_set (G_OBJECT (tone_src1), "volume", 0.7, NULL);
-        g_object_set (G_OBJECT (tone_src2), "volume", 0.7, NULL);
+        //Now play dtmf tone
+        //More Volume then 0.5V (Alsa 58db) causes distortion by FET Switches
+        g_object_set (G_OBJECT (tone_src1), "volume", 0.5, NULL);
+        g_object_set (G_OBJECT (tone_src2), "volume", 0.5, NULL);
         g_object_set (G_OBJECT (tone_src1), "wave", 0, NULL);
         g_object_set (G_OBJECT (tone_src2), "wave", 0, NULL);
 
-freq_low = dtmf_freq_low[mfv_buffer[dtmf_rd_idx]];
-freq_high = dtmf_freq_high[mfv_buffer[dtmf_rd_idx]];
+        freq_low = dtmf_freq_low[mfv_buffer[dtmf_rd_idx]];
+        freq_high = dtmf_freq_high[mfv_buffer[dtmf_rd_idx]];
 
-       g_object_set (G_OBJECT (tone_src1), "freq", dtmf_freq_low[mfv_buffer[dtmf_rd_idx]], NULL);
-       g_object_set (G_OBJECT (tone_src2), "freq", dtmf_freq_high[mfv_buffer[dtmf_rd_idx]], NULL);
+        g_object_set (G_OBJECT (tone_src1), "freq", dtmf_freq_low[mfv_buffer[dtmf_rd_idx]], NULL);
+        g_object_set (G_OBJECT (tone_src2), "freq", dtmf_freq_high[mfv_buffer[dtmf_rd_idx]], NULL);
 
         gst_element_set_state (tone_pipeline, GST_STATE_PLAYING);
         usleep (200000);
         gst_element_set_state (tone_pipeline, GST_STATE_NULL);
         usleep (200000);
+
+        //After DTMF played, Turn off Signal_B DTMF source
+        write_mcp_bit(DTMF_READ, MCP_OLAT, SIGNAL_B_TO, 0, 3097);
+        write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_TO_ENABLE, 0, 4057);
+        //And turn on Audio link between line internal and etxternal after dial is completed
+        origin_number = line_requesting();
+        set_ext_connect(origin_number);
+
+        connection_check();
+
+
         dtmf_rd_idx++; //increment read index
 
     }
