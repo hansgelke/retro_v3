@@ -20,7 +20,11 @@ sem_t sem_dtmf;
 extern uint8_t number_dialed;
 uint32_t binary_lines;
 
-uint8_t first_num;
+uint8_t first_number;
+uint8_t second_number;
+uint8_t complete_number;
+
+
 uint8_t dialed_number;
 uint8_t loop_bits;
 
@@ -118,7 +122,7 @@ void main_fsm()
         }
         // Put Dail tone on requesting line
         else if (origin_number != 0xff) {
-            melody = ger_dial ;
+            melody = gb_dial ;
             sem_post(&sem_signal);
             //set matrix to output dial tone
             write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00, 1111);
@@ -212,7 +216,7 @@ void main_fsm()
         pthread_cond_wait(&cond_dialcomplete, &dial_mutex);
         pthread_mutex_unlock(&dial_mutex);
 
-        //first_num = number_dialed;
+        first_number = number_dialed;
 
         //Evaluate return Message from rotary encoder
         switch (dial_status) {
@@ -260,14 +264,16 @@ void main_fsm()
                 dtmf_wr_idx = 0;
                 dtmf_rd_idx = 0;
 
-                    ext_state = st_outsideline_rotary;
+                ext_state = st_outsideline_rotary;
 
             }
             else {
                 //>>>>GOTO st_second_number
-                //Turn Tones off
+                //Turn Tones off by removing semaphore and tone pipeline zero
 
                 sem_init(&sem_signal,0,0);
+                gst_element_set_state (tone_pipeline, GST_STATE_NULL);
+
 
                 pthread_mutex_lock(&dial_mutex);
                 pthread_cond_signal(&cond_dial);
@@ -307,7 +313,7 @@ void main_fsm()
                 write_mcp_bit(CONNECT_CTRL, MCP_OLAT, EXT_LINE_RELAY, 1, 4057);
 
 
-                    ext_state = st_outsideline_dtmf;
+                ext_state = st_outsideline_dtmf;
 
             }
             else {
@@ -356,14 +362,46 @@ void main_fsm()
         pthread_mutex_lock(&dial_mutex);
         pthread_cond_wait(&cond_dialcomplete, &dial_mutex);
         pthread_mutex_unlock(&dial_mutex);
+  second_number = number_dialed;
 
-        //dialed_number = number_dialed;
-        //>>>>> GOTO st_int_ring
-        melody = gb_ring;
-        sem_post(&sem_signal);
-        write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 5071);
-        ac_on(number_dialed);
-        ext_state = st_int_ring;
+  complete_number = (first_number *10) + second_number;
+
+        //If caller is not calling himself
+        if ((number_dialed-1) != origin_number) {
+            switch(country_set[number_dialed-1]) {
+            case us:
+                melody = gb_ring;
+                break;
+            case gb:
+                melody = gb_ring;
+                break;
+            default:
+                melody = ger_ring;
+            }
+
+            write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 5071);
+            sem_post(&sem_signal);
+
+            ac_on(number_dialed);
+            ext_state = st_int_ring;
+        }
+        //In case same number is dialed
+        else {
+            switch(country_set[number_dialed-1]) {
+            case us:
+                melody = ger_enga;
+                break;
+            case gb:
+                melody = ger_enga;
+                break;
+            default:
+                melody = ger_enga;
+            }
+            sem_post(&sem_signal);
+
+            ext_state = st_engaged;
+
+        }
 
         break;
         /******************************************************************************
@@ -375,7 +413,7 @@ void main_fsm()
         //Arm rotary dial receiver
         pthread_mutex_lock(&dial_mutex);
         pthread_cond_signal(&cond_dial);
-      pthread_cond_signal(&cond_dtmf_dial);
+        pthread_cond_signal(&cond_dtmf_dial);
         pthread_mutex_unlock(&dial_mutex);
 
         //Wait for dial complete
@@ -452,8 +490,8 @@ void main_fsm()
            ******************************************************************************/
 
     case st_outsideline_dtmf:
-//If the terminal is dtmf, no rotary to dtmf conversion needs to be done
-// Wait only until the receiver is hang up
+        //If the terminal is dtmf, no rotary to dtmf conversion needs to be done
+        // Wait only until the receiver is hang up
         //if phone is hang up go to idle
         if (line_requesting() == 0xff){
             //>>>>>>>>>>  GO TO st_idle  >>>>>>>>>>>>>>>>>>>>
@@ -492,7 +530,7 @@ void main_fsm()
             //Turn of AC Ringing Thyristors for all phones
             ac_off(9);
             //Wait for Signal to thyristor to settle
-              usleep(20000);
+            usleep(20000);
             sem_init(&sem_signal,0,0);
             write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 5071);
 
@@ -537,6 +575,25 @@ void main_fsm()
         }
         else {
             ext_state = st_int_accepted;
+
+        }
+        break;
+
+        /***************************************************/
+        //                      Engaged
+        /****************************************************/
+
+    case st_engaged:
+        //if all participants are leaving call go to idle
+        if (line_requesting() == 0xff){
+
+            //>>>>>>>>>>  GO TO st_idle  >>>>>>>>>>>>>>>>>>>>
+            sem_init(&sem_signal,0,0);
+            return_to_idle();
+            ext_state = st_idle;
+        }
+        else {
+            ext_state = st_engaged;
 
         }
         break;

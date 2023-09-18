@@ -33,47 +33,40 @@ void *tf_generate_signals()
         sem_wait(&sem_signal);
         sem_post(&sem_signal);//Post for next cycle
 
-        g_object_set (G_OBJECT (tone_src1), "volume", 1.0, NULL);
-        g_object_set (G_OBJECT (tone_src2), "volume", 1.0, NULL);
-        g_object_set (G_OBJECT (tone_src1), "wave", 0, NULL);
-        g_object_set (G_OBJECT (tone_src2), "wave", 0, NULL);
         //set note_idx to 0 and read out parameters for index
         note_idx = 0;
         skip_flag = false;
         //This loop goes through the table which geneartes signals.
         //A sequence of max 8 segments is possible. If less then 8 requiered segments is
-        //indicted with the skip flag
+        //indicated with the skip flag
         while((note_idx <= 8) && !(skip_flag)) {
             //ringer_on = melody[note_idx].ringer_on;
             //tone_on = melody[note_idx].tone_on;
             //sleep_time = melody[note_idx].duration;
             skip_flag = melody[note_idx].skip;
+
+            g_object_set (G_OBJECT (tone_src1), "wave", 0, NULL);
+            g_object_set (G_OBJECT (tone_src2), "wave", 0, NULL);
+            g_object_set (G_OBJECT (tone_src1), "volume", melody[note_idx].vol, NULL);
+            g_object_set (G_OBJECT (tone_src2), "volume", melody[note_idx].vol, NULL);
             g_object_set (G_OBJECT (tone_src1), "freq", melody[note_idx].freq_1, NULL);
             g_object_set (G_OBJECT (tone_src2), "freq", melody[note_idx].freq_2, NULL);
 
             if (melody[note_idx].tone_on) {
                 gst_element_set_state (tone_pipeline, GST_STATE_PLAYING);
             }
-            else
-            {gst_element_set_state (tone_pipeline, GST_STATE_NULL);
+            else {
+                gst_element_set_state (tone_pipeline, GST_STATE_NULL);
             }
-
             //If ringer flag is set, turn on Bridge for AC generation
             if (melody[note_idx].ringer_on) {
-
                 //write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 1, 5071);
                 pwm_reg_write(PWM_CTL, 0x81);
-
             }
-
             else {
                 //write_mcp_bit(CONNECT_CTRL, MCP_OLAT, RINGER_ENABLE, 0, 5077);
                 pwm_reg_write(PWM_CTL, 0x00);
-
-
-
             }
-
             // go to sleep for specified time after wakeup stop tone, stop ring
             usleep(melody[note_idx].duration);
 
