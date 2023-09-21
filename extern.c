@@ -37,6 +37,8 @@ uint32_t ring_timer = 0;
 uint8_t dial_status = 0;
 
 extern uint8_t mfv_buffer[32];
+uint8_t i = 0;
+bool invalid_flag = true;
 
 
 
@@ -122,7 +124,7 @@ void main_fsm()
         }
         // Put Dail tone on requesting line
         else if (origin_number != 0xff) {
-            melody = gb_dial ;
+            melody = ger_dial ;
             sem_post(&sem_signal);
             //set matrix to output dial tone
             write_ctrl_register(MATRIX_FROM, MCP_OLAT, 0x00, 1111);
@@ -362,12 +364,26 @@ void main_fsm()
         pthread_mutex_lock(&dial_mutex);
         pthread_cond_wait(&cond_dialcomplete, &dial_mutex);
         pthread_mutex_unlock(&dial_mutex);
-  second_number = number_dialed;
 
-  complete_number = (first_number *10) + second_number;
+        //Check for invalid numbers
+        second_number = number_dialed;
+        complete_number = (first_number *10) + second_number;
+        invalid_flag = false;
+        for (i = 0; i <= 100; i++)
+        {
+            if (invalid_no[i] == complete_number) {
+                invalid_flag = true;
+            }
+
+        }
+        // If an invalid number is dialed
+        if (invalid_flag == true) {
+        ext_state = st_unobtainable;
+
+        }
 
         //If caller is not calling himself
-        if ((number_dialed-1) != origin_number) {
+        else if ((number_dialed-1) != origin_number) {
             switch(country_set[number_dialed-1]) {
             case us:
                 melody = gb_ring;
@@ -597,6 +613,30 @@ void main_fsm()
 
         }
         break;
+        /***************************************************/
+                    //                      STATE UNOBTAINABLE
+                    /****************************************************/
+
+
+    case st_unobtainable:
+
+        g_object_set (G_OBJECT (announcement_src), "location", "./announcement/coconut.wav", NULL);
+
+        //While receiver is still lifted play the anouncement
+        while(line_requesting() != 0xff) {
+
+            gst_element_set_state (announcement_pipeline, GST_STATE_PLAYING);
+
+        }
+
+        gst_element_set_state (announcement_pipeline, GST_STATE_NULL);
+
+
+
+        return_to_idle();
+        ext_state = st_idle;
+break;
+
 
         /***************************************************/
         //                      SWITCH DEFAULT STATE
@@ -607,13 +647,12 @@ void main_fsm()
         return_to_idle();
         ext_state = st_idle;
 
-    }
+}
+
 
 }
 
-//ac_on = read_ctrl_register(PHONE_AC,MCP_OLAT, 373);
-//dc_on = read_ctrl_register(PHONE_DC,MCP_OLAT, 374);
-//printf("AC: '%x' DC: '%x' \n", ac_on, dc_on);
+
 
 
 

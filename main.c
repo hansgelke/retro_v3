@@ -66,7 +66,7 @@ int main(void) {
      *************** Initialize Tasks ***************************
      ************************************************************/
 
-    pthread_t t_pwm, t_tone_gen, t_generate_signals, t_rotary, t_dtmf, t_main_fsm, t_play_dtmf;
+    pthread_t t_pwm, t_tone_gen, t_generate_signals, t_rotary, t_dtmf, t_main_fsm, t_play_dtmf, t_play_announcements;
     uint8_t iret1;
 
     iret1 = pthread_create(&t_pwm, NULL, &tf_pwm, NULL);
@@ -74,6 +74,7 @@ int main(void) {
     iret1 = pthread_create(&t_dtmf, NULL, &tf_dtmf, NULL);
     iret1 = pthread_create(&t_main_fsm, NULL, &tf_main_fsm, NULL);
     iret1 = pthread_create(&t_tone_gen, NULL, &tf_tone_gen, NULL);
+    iret1 = pthread_create(&t_play_announcements, NULL, &tf_play_announcements, NULL);
     iret1 = pthread_create(&t_generate_signals, NULL, &tf_generate_signals, NULL);
     iret1 = pthread_create(&t_play_dtmf, NULL, &tf_play_dtmf, NULL);
     usleep(10000);
@@ -84,6 +85,7 @@ int main(void) {
     pthread_join(t_dtmf, NULL);
     pthread_join(t_main_fsm, NULL);
     pthread_join(t_tone_gen, NULL);
+    pthread_join(t_play_announcements, NULL);
     pthread_join(t_generate_signals, NULL);
     pthread_join(t_play_dtmf, NULL);
 

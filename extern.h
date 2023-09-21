@@ -37,7 +37,9 @@ typedef enum {
     st_int_ring, // (10) Internal ring
     st_int_accepted, // (11) An inernal connection was accepted
     st_debounce, //(12)
-    st_engaged //(12)
+    st_engaged, //(13)
+    st_unobtainable //(14)
+
 } ext_fsm_state_t;
 
 

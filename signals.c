@@ -77,3 +77,64 @@ void *tf_generate_signals()
 
     }
 }
+
+/***********************************************/
+/*          PLAY ANNOUCEMENTS                  */
+/***********************************************/
+
+void
+*tf_play_announcements()
+{
+    struct sched_param para_announce;
+    para_announce.sched_priority = 40;
+    sched_setscheduler(0,SCHED_RR, &para_announce);
+    GstElement	*conv1;
+    GstElement	*parse;
+    GstElement	*sink;
+    //GMainLoop	*loop;
+    //GstCaps *caps;
+
+    gst_init (NULL,NULL);
+
+    announcement_pipeline = gst_pipeline_new ("announcement_pipeline");
+
+    announcement_src = gst_element_factory_make ("filesrc", "inst_filesrc");
+    //g_object_set (G_OBJECT (src), "location", "./announcement/coconut.wav", NULL);
+
+    conv1 = gst_element_factory_make ("audioconvert", "inst_audioconvert1");
+
+    parse = gst_element_factory_make ("wavparse", "inst_wavparse1");
+
+    sink = gst_element_factory_make ("alsasink", "inst_alsasink");
+    g_object_set (G_OBJECT (sink), "device", "hw:1,0", NULL);
+
+    gst_bin_add_many (GST_BIN (announcement_pipeline), announcement_src, parse, conv1, sink, NULL);
+
+    announce_caps = gst_caps_new_simple("audio/x-raw", "rate", G_TYPE_INT, 44100, NULL);
+
+    /* we link the elements together */
+    if (
+            !gst_element_link (announcement_src, parse) ||
+            !gst_element_link (parse, conv1) ||
+            !gst_element_link_filtered (conv1, sink,announce_caps)
+            ) {
+        fprintf (stderr, "can't link elements\n");
+        exit (1);
+    }
+
+    //gst_element_set_state (announcement_pipeline, GST_STATE_PLAYING);
+
+    /* we need to run a GLib main loop to get the messages */
+    announce_loop = g_main_loop_new (NULL, FALSE);
+
+    /* Runs a main loop until g_main_loop_quit() is called on the loop */
+    g_print ("Running_Announcements_...\n");
+    g_main_loop_run (announce_loop);
+
+    /* Out of the main loop, clean up nicely */
+    gst_caps_unref(announce_caps);
+    g_main_loop_unref (announce_loop);
+    gst_object_unref (announcement_pipeline);
+
+    return 0;
+}

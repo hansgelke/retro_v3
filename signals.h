@@ -13,6 +13,15 @@
 
 
 void *tf_generate_signals();
+void *tf_play_announcements();
+
+//Define Annoucement Pipeline
+GstElement	*announcement_pipeline;
+GstElement	*announcement_src;
+GstCaps *announce_caps;
+GMainLoop	*announce_loop;
+
+
 
 bool skip_flag;
 
