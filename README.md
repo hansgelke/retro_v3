@@ -1,2 +1,5 @@
 # retro_v3
-Third Version of retro HW 131022 reis82xs
+Software: retro_3_v1.0
+For PCB retro_3_v131022 Schematic: retro_3_v1.0
+Known Bugs: 
+1.) Not all DTMF phones are working
