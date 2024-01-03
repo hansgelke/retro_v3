@@ -620,7 +620,7 @@ void main_fsm()
 
     case st_unobtainable:
 
-        g_object_set (G_OBJECT (announcement_src), "location", "./announcement/coconut.wav", NULL);
+        g_object_set (G_OBJECT (announcement_src), "location", "./announcement/kein_anschluss.wav", NULL);
 
         //While receiver is still lifted play the anouncement
         while(line_requesting() != 0xff) {

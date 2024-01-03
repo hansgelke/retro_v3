@@ -186,9 +186,11 @@ void
 
 
         //Now play dtmf tone
-        //More Volume then 0.5V (Alsa 58db) causes distortion by FET Switches
-        g_object_set (G_OBJECT (tone_src1), "volume", 0.5, NULL);
-        g_object_set (G_OBJECT (tone_src2), "volume", 0.5, NULL);
+        //More Volume then 0.5V (Alsa 53db) causes distortion by FET Switches
+        //More Volume then 0.3V (Alsa 71db) causes distortion by FET Switches
+
+        g_object_set (G_OBJECT (tone_src1), "volume", 0.3, NULL);
+        g_object_set (G_OBJECT (tone_src2), "volume", 0.3, NULL);
         g_object_set (G_OBJECT (tone_src1), "wave", 0, NULL);
         g_object_set (G_OBJECT (tone_src2), "wave", 0, NULL);
 

@@ -90,6 +90,7 @@ void
     sched_setscheduler(0,SCHED_RR, &para_announce);
     GstElement	*conv1;
     GstElement	*parse;
+    GstElement	*resample;
     GstElement	*sink;
     //GMainLoop	*loop;
     //GstCaps *caps;
@@ -98,8 +99,10 @@ void
 
     announcement_pipeline = gst_pipeline_new ("announcement_pipeline");
 
+      resample = gst_element_factory_make ("audioresample", "resample_1");
+
     announcement_src = gst_element_factory_make ("filesrc", "inst_filesrc");
-    //g_object_set (G_OBJECT (src), "location", "./announcement/coconut.wav", NULL);
+    //g_object_set (G_OBJECT (src), "location", "./announcement/kein_anschluss_D.wav", NULL);
 
     conv1 = gst_element_factory_make ("audioconvert", "inst_audioconvert1");
 
@@ -108,7 +111,7 @@ void
     sink = gst_element_factory_make ("alsasink", "inst_alsasink");
     g_object_set (G_OBJECT (sink), "device", "hw:1,0", NULL);
 
-    gst_bin_add_many (GST_BIN (announcement_pipeline), announcement_src, parse, conv1, sink, NULL);
+    gst_bin_add_many (GST_BIN (announcement_pipeline), announcement_src, parse, resample, conv1, sink, NULL);
 
     announce_caps = gst_caps_new_simple("audio/x-raw", "rate", G_TYPE_INT, 44100, NULL);
 
@@ -116,7 +119,12 @@ void
     if (
             !gst_element_link (announcement_src, parse) ||
             !gst_element_link (parse, conv1) ||
+            /*!gst_element_link (conv1, resample) ||*/
+            /*!gst_element_link (resample, sink)*/
+
             !gst_element_link_filtered (conv1, sink,announce_caps)
+
+
             ) {
         fprintf (stderr, "can't link elements\n");
         exit (1);
